@@ -43,8 +43,12 @@ func main() {
 	ctx := context.Background()
 	godotenv.Load()
 
+	postMessage(ctx, TEST_REQUEST)
+}
+
+func postMessage(ctx context.Context, body string) (any, error) {
 	apiKey := os.Getenv("GA_ANTHROPIC_API_KEY")
-	bodyReader := bytes.NewReader([]byte(TEST_REQUEST))
+	bodyReader := bytes.NewReader([]byte(body))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ANTHROPIC_MESSAGES_URL, bodyReader)
 	if err != nil {
@@ -57,11 +61,15 @@ func main() {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatalf("%v", err.Error())
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	content, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	log.Printf("Response:\n%v", string(content))
+	return string(content), nil
 }
