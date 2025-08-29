@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/frozenkro/go-agent/internal/models/anthropic"
 	"github.com/joho/godotenv"
 )
 
@@ -43,10 +45,29 @@ func main() {
 	ctx := context.Background()
 	godotenv.Load()
 
-	postMessage(ctx, TEST_REQUEST)
+	for {
+		resBytes, err := postMessage(ctx, TEST_REQUEST)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		response := anthropic.AnthropicMessagesResponse{}
+		err = json.Unmarshal(resBytes, response)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		_, done, err := handleResponse(response)
+		if done {
+			break
+		}
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
 }
 
-func postMessage(ctx context.Context, body string) (any, error) {
+func postMessage(ctx context.Context, body string) ([]byte, error) {
 	apiKey := os.Getenv("GA_ANTHROPIC_API_KEY")
 	bodyReader := bytes.NewReader([]byte(body))
 
@@ -71,5 +92,9 @@ func postMessage(ctx context.Context, body string) (any, error) {
 	}
 
 	log.Printf("Response:\n%v", string(content))
-	return string(content), nil
+	return content, nil
+}
+
+func handleResponse(response anthropic.AnthropicMessagesResponse) (any, bool, error) {
+	return nil, false, nil
 }
