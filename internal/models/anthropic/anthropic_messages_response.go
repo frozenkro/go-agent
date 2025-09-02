@@ -1,87 +1,221 @@
 package anthropic
 
-type Message struct {
-	Role    string    `json:"role"`
-	Content []Content `json:"content"`
-}
-
-type ToolConfiguration struct {
-	AllowedTools []string `json:"allowed_tools"`
-	Enabled      bool     `json:"enabled"`
-}
-
-type MCPServer struct {
-	Name               string            `json:"name"`
-	Type               string            `json:"type"`
-	Url                string            `json:"url"`
-	AuthorizationToken string            `json:"authorization_token"`
-	ToolConfiguration  ToolConfiguration `json:"tool_configuration"`
-}
-
-type Metadata struct {
-	UserId string `json:"user_id"`
-}
-
-type ThinkingData struct {
-	BudgetTokens int    `json:"budget_tokens"`
-	Type         string `json:"type"`
-}
-
-type Tool interface {
-	GetType() string
-	GetName() string
-}
-
-type BaseTool struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
-func (t *BaseTool) GetType() string {
-	return t.Type
-}
-func (t *BaseTool) GetName() string {
-	return t.Name
-}
-
-type BashTool struct {
-	BaseTool
-	CacheControl CacheControl `json:"cache_control"`
-}
-
-type TextEditorTool struct {
-	BaseTool
-	CacheControl  CacheControl `json:"cache_control"`
-	MaxCharacters int          `json:"max_characters"`
-}
-
-type CacheTTL string
-
-const (
-	TTL_5m CacheTTL = "5m"
-	TTL_1h CacheTTL = "1h"
+import (
+	"encoding/json"
+	"fmt"
 )
 
-type CacheControl struct {
-	Type string   `json:"type"`
-	TTL  CacheTTL `json:"ttl"`
+type ContentTypes string
+
+const (
+	TEXT                       ContentTypes = "text"
+	THINKING                   ContentTypes = "thinking"
+	REDACTED_THINKING          ContentTypes = "redacted_thinking"
+	TOOL_USE                   ContentTypes = "tool_use"
+	SERVER_TOOL_USE            ContentTypes = "server_tool_use"
+	WEB_SEARCH_TOOL_RESULT     ContentTypes = "web_search_tool_result"
+	CODE_EXECUTION_TOOL_RESULT ContentTypes = "code_execution_tool_result"
+	MCP_TOOL_USE               ContentTypes = "mcp_tool_use"
+	MCP_TOOL_RESULT            ContentTypes = "mcp_tool_result"
+	CONTAINER_UPLOAD           ContentTypes = "container_upload"
+)
+
+// Content interface that all content types implement
+type Content interface {
+	GetType() ContentTypes
 }
 
-type AnthropicMessagesRequest struct {
-	Model         string       `json:"model"`
-	Messages      []Message    `json:"messages"`
-	MaxTokens     int          `json:"max_tokens"`
-	Container     string       `json:"container"`
-	MCPServers    []MCPServer  `json:"mcp_servers"`
-	Metadata      Metadata     `json:"metadata"`
-	ServiceTier   string       `json:"service_tier"`
-	StopSequences []string     `json:"stop_sequences"`
-	Stream        bool         `json:"stream"`
-	System        string       `json:"system"` //System prompt
-	Temperature   float32      `json:"temperature"`
-	Thinking      ThinkingData `json:"thinking"`
-	ToolChoice    any          `json:"tool_choice"`
-	Tools         []Tool       `json:"tools"`
-	TopK          int          `json:"top_k"`
-	TopP          int          `json:"top_p"`
+// Base struct for common fields
+type BaseContent struct {
+	Type ContentTypes `json:"type"`
+}
+
+func (b BaseContent) GetType() ContentTypes {
+	return b.Type
+}
+
+// Specific content type structs
+type TextContent struct {
+	BaseContent
+	Text string `json:"text"`
+}
+
+type ThinkingContent struct {
+	BaseContent
+	Signature string `json:"signature"`
+	Thinking  string `json:"thinking"`
+}
+
+type RedactedThinkingContent struct {
+	BaseContent
+	Data string `json:"data"`
+}
+
+type ToolUseContent struct {
+	BaseContent
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Input any    `json:"input"`
+}
+
+type WebSearchToolResultContent struct {
+	BaseContent
+	ToolUseId string                            `json:"tool_use_id"`
+	Content   WebSearchToolResultContentContent `json:"content"`
+}
+
+type WebSearchToolResultContentContent struct {
+	BaseContent
+	ErrorCode string `json:"error_code"`
+}
+
+type CodeExecutionToolResultContent struct {
+	BaseContent
+	Content   Content `json:"-"`
+	ToolUseId string  `json:"tool_use_id"`
+}
+
+type CodeExecutionToolResultContentContent struct {
+	BaseContent
+	Content    CodeExecutionToolResultContentContentContent `json:"content"`
+	ReturnCode int                                          `json:"return_code"`
+	StdErr     string                                       `json:"stderr"`
+	StdOut     string                                       `json:"stdout"`
+}
+
+type CodeExecutionToolResultContentErr struct {
+	BaseContent
+	ErrorCode string `json:"error_code"`
+}
+
+type CodeExecutionToolResultContentContentContent struct {
+	BaseContent
+	FileId string `json:"file_id"`
+}
+
+type MCPToolUseContent struct {
+	BaseContent
+	Id         string `json:"id"`
+	Name       string `json:"name"`
+	Input      any    `json:"input"`
+	ServerName string `json:"server_name"`
+}
+
+type MCPToolResultContent struct {
+	BaseContent
+	Content   string `json:"content"`
+	IsError   bool   `json:"is_error"`
+	ToolUseId string `json:"tool_use_id"`
+}
+
+type ContainerUploadContent struct {
+	BaseContent
+	FileId string `json:"file_id"`
+}
+
+func UnmarshalContents(data []byte) ([]Content, error) {
+	var rawContents []json.RawMessage
+	if err := json.Unmarshal(data, &rawContents); err != nil {
+		return nil, err
+	}
+
+	contents := make([]Content, len(rawContents))
+	for i, raw := range rawContents {
+		var base BaseContent
+		if err := json.Unmarshal(raw, &base); err != nil {
+			return nil, err
+		}
+
+		var content Content
+		switch base.Type {
+		case TEXT:
+			content = &TextContent{}
+		case THINKING:
+			content = &ThinkingContent{}
+		case REDACTED_THINKING:
+			content = &RedactedThinkingContent{}
+		case TOOL_USE:
+			content = &ToolUseContent{}
+		case SERVER_TOOL_USE:
+			content = &ToolUseContent{}
+		case WEB_SEARCH_TOOL_RESULT:
+			content = &WebSearchToolResultContent{}
+		case CODE_EXECUTION_TOOL_RESULT:
+			content = &CodeExecutionToolResultContent{}
+		case MCP_TOOL_USE:
+			content = &MCPToolUseContent{}
+		case MCP_TOOL_RESULT:
+			content = &MCPToolResultContent{}
+		case CONTAINER_UPLOAD:
+			content = &ContainerUploadContent{}
+		default:
+			return nil, fmt.Errorf("unknown content type: %s", base.Type)
+		}
+
+		if err := json.Unmarshal(raw, content); err != nil {
+			return nil, err
+		}
+		contents[i] = content
+	}
+
+	return contents, nil
+}
+
+// Updated response struct
+type AnthropicMessagesResponse struct {
+	ID         string    `json:"id"`
+	Type       string    `json:"type"`
+	Role       string    `json:"role"`
+	Content    []Content `json:"-"`
+	Model      string    `json:"model"`
+	StopReason string    `json:"stop_reason"`
+	Usage      any       `json:"usage"`
+	Container  Container `json:"container"`
+}
+
+// Custom unmarshaling for the response
+func (r *AnthropicMessagesResponse) UnmarshalJSON(data []byte) error {
+	type Alias AnthropicMessagesResponse
+	aux := &struct {
+		Content json.RawMessage `json:"content"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	contents, err := UnmarshalContents(aux.Content)
+	if err != nil {
+		return err
+	}
+	r.Content = contents
+
+	return nil
+}
+
+type CacheCreation struct {
+	Ephemeral1hInputTokens int `json:"ephemeral_1h_input_tokens"`
+	Ephemeral5mInputTokens int `json:"ephemeral_5m_input_tokens"`
+}
+
+type ServerToolUse struct {
+	WebSearchRequests int `json:"web_search_requests"`
+}
+
+type AnthropicMessagesUsage struct {
+	CacheCreation            CacheCreation `json:"cache_creation"`
+	CacheCreationInputTokens int           `json:"cache_creation_input_tokens"`
+	CacheReadInputTokens     int           `json:"cache_read_input_tokens"`
+	InputTokens              int           `json:"input_tokens"`
+	OutputTokens             int           `json:"output_tokens"`
+	ServerToolUse            ServerToolUse `json:"server_tool_use"`
+	ServiceTier              string        `json:"service_tier"`
+}
+
+type Container struct {
+	ExpiresAt string `json:"expires_at"`
+	Id        string `json:"id"`
 }

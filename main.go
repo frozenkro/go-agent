@@ -9,55 +9,54 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/frozenkro/go-agent/internal/agents"
 	"github.com/frozenkro/go-agent/internal/models/anthropic"
 	"github.com/joho/godotenv"
 )
 
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
-const TEST_REQUEST = `
-{
-    "model": "claude-sonnet-4-20250514",
-    "max_tokens": 1024,
-    "messages": [
-        {"role": "user", "content": "Hello, world"}
-    ]
-}
-`
+const TEST_PROMPT = "List all files in the current directory"
 
-const EXEC_TOOL_SCHEMA = `
-{
-	"name": "execute_command",
-	"description": "Run any common bash command, such as 'ls', 'cd', 'cat', 'sed', etc.",
-	"input_schema": {
-		"type": "object",
-		"properties": {
-			"command": {
-					"type": "string",
-					"description": "Arbitrary bash command"
-			}
-		},
-		"required": ["command"]
-	}
+type AnthropicHandler interface {
+	HandleResponse(anthropic.AnthropicMessagesResponse) (anthropic.AnthropicMessagesRequest, bool, error)
+	InitRequest(anthropic.Model, string, ...anthropic.AnthropicMessagesRequestOption)
 }
-`
 
 func main() {
+	var (
+		request  *anthropic.AnthropicMessagesRequest
+		response *anthropic.AnthropicMessagesResponse
+		done     bool
+	)
+
 	ctx := context.Background()
 	godotenv.Load()
 
+	anthropicAgent, err := agents.NewAnthropicAgent()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	request = anthropicAgent.InitRequest(anthropic.SONNET_4, TEST_PROMPT, anthropic.WithTools(anthropic.BASH))
+
 	for {
-		resBytes, err := postMessage(ctx, TEST_REQUEST)
+		reqJson, err := json.Marshal(request)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 
-		response := anthropic.AnthropicMessagesResponse{}
+		resBytes, err := postMessage(ctx, string(reqJson))
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		response = &anthropic.AnthropicMessagesResponse{}
 		err = json.Unmarshal(resBytes, response)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 
-		_, done, err := handleResponse(response)
+		request, done, err = anthropicAgent.HandleResponse(response)
 		if done {
 			break
 		}
@@ -93,8 +92,4 @@ func postMessage(ctx context.Context, body string) ([]byte, error) {
 
 	log.Printf("Response:\n%v", string(content))
 	return content, nil
-}
-
-func handleResponse(response anthropic.AnthropicMessagesResponse) (any, bool, error) {
-	return nil, false, nil
 }
