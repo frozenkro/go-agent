@@ -22,10 +22,6 @@ func NewAnthropicAgent() (AnthropicAgent, error) {
 
 func (a *AnthropicAgent) InitRequest(model anthropic.Model, prompt string, opts ...anthropic.AnthropicMessagesRequestOption) *anthropic.AnthropicMessagesRequest {
 
-	toolNameMap := make(map[anthropic.ToolName]anthropic.Tool)
-	toolNameMap[anthropic.BASH] = anthropic.NewBashTool()
-	toolNameMap[anthropic.TEXT_EDITOR] = anthropic.NewTextEditorTool()
-
 	req := &anthropic.AnthropicMessagesRequest{
 		Model:     "claude-sonnet-4-20250514",
 		MaxTokens: 1024,
@@ -42,7 +38,7 @@ func (a *AnthropicAgent) InitRequest(model anthropic.Model, prompt string, opts 
 				},
 			},
 		},
-		Tools: []anthropic.Tool{},
+		Tools: []anthropic.AnthropicToolSpec{},
 	}
 
 	for _, opt := range opts {
@@ -53,5 +49,13 @@ func (a *AnthropicAgent) InitRequest(model anthropic.Model, prompt string, opts 
 }
 
 func (a *AnthropicAgent) HandleResponse(response *anthropic.AnthropicMessagesResponse) (*anthropic.AnthropicMessagesRequest, bool, error) {
+
+	currentContent := response.Content[len(response.Content)-1]
+
+	switch currentContent.GetType() {
+	case anthropic.TOOL_USE:
+
+	}
+
 	return &anthropic.AnthropicMessagesRequest{}, false, nil
 }

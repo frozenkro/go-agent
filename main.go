@@ -11,6 +11,7 @@ import (
 
 	"github.com/frozenkro/go-agent/internal/agents"
 	"github.com/frozenkro/go-agent/internal/models/anthropic"
+	"github.com/frozenkro/go-agent/internal/options"
 	"github.com/joho/godotenv"
 )
 
@@ -37,7 +38,7 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	request = anthropicAgent.InitRequest(anthropic.SONNET_4, TEST_PROMPT, anthropic.WithTools(anthropic.BASH))
+	request = anthropicAgent.InitRequest(anthropic.SONNET_4, TEST_PROMPT, options.WithTools(anthropic.BASH))
 
 	for {
 		reqJson, err := json.Marshal(request)

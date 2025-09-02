@@ -1,10 +1,5 @@
 package anthropic
 
-import (
-	"fmt"
-	"log"
-)
-
 type Message struct {
 	Role    string    `json:"role"`
 	Content []Content `json:"content"`
@@ -39,7 +34,7 @@ const (
 	TEXT_EDITOR ToolName = "str_replace_based_edit_tool"
 )
 
-type Tool interface {
+type AnthropicToolSpec interface {
 	GetType() string
 	GetName() ToolName
 }
@@ -95,22 +90,22 @@ type CacheControl struct {
 }
 
 type AnthropicMessagesRequest struct {
-	Model         string       `json:"model"`
-	Messages      []Message    `json:"messages"`
-	MaxTokens     int          `json:"max_tokens"`
-	Container     string       `json:"container"`
-	MCPServers    []MCPServer  `json:"mcp_servers"`
-	Metadata      Metadata     `json:"metadata"`
-	ServiceTier   string       `json:"service_tier"`
-	StopSequences []string     `json:"stop_sequences"`
-	Stream        bool         `json:"stream"`
-	System        string       `json:"system"` //System prompt
-	Temperature   float32      `json:"temperature"`
-	Thinking      ThinkingData `json:"thinking"`
-	ToolChoice    any          `json:"tool_choice"`
-	Tools         []Tool       `json:"tools"`
-	TopK          int          `json:"top_k"`
-	TopP          int          `json:"top_p"`
+	Model         string              `json:"model"`
+	Messages      []Message           `json:"messages"`
+	MaxTokens     int                 `json:"max_tokens"`
+	Container     string              `json:"container"`
+	MCPServers    []MCPServer         `json:"mcp_servers"`
+	Metadata      Metadata            `json:"metadata"`
+	ServiceTier   string              `json:"service_tier"`
+	StopSequences []string            `json:"stop_sequences"`
+	Stream        bool                `json:"stream"`
+	System        string              `json:"system"` //System prompt
+	Temperature   float32             `json:"temperature"`
+	Thinking      ThinkingData        `json:"thinking"`
+	ToolChoice    any                 `json:"tool_choice"`
+	Tools         []AnthropicToolSpec `json:"tools"`
+	TopK          int                 `json:"top_k"`
+	TopP          int                 `json:"top_p"`
 }
 
 type Model string
@@ -120,29 +115,3 @@ const (
 )
 
 type AnthropicMessagesRequestOption func(*AnthropicMessagesRequest)
-
-func WithTools(tools ...ToolName) AnthropicMessagesRequestOption {
-	return func(a *AnthropicMessagesRequest) {
-
-		for _, toolName := range tools {
-			tool, err := ToolByName(toolName)
-
-			if err == nil {
-				a.Tools = append(a.Tools, tool)
-			} else {
-				log.Printf(err.Error())
-			}
-		}
-	}
-}
-
-func ToolByName(name ToolName) (Tool, error) {
-	switch name {
-	case BASH:
-		return NewBashTool(), nil
-	case TEXT_EDITOR:
-		return NewTextEditorTool(), nil
-	default:
-		return nil, fmt.Errorf("No tool found with name %v", name)
-	}
-}

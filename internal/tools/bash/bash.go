@@ -8,8 +8,13 @@ import (
 	"strings"
 	"time"
 
+	toolschema "github.com/frozenkro/go-agent/internal/models/anthropic/tool_schema"
 	"github.com/google/uuid"
 )
+
+type BashTool struct {
+	bs *BashSession
+}
 
 type BashSession struct {
 	cmd            *exec.Cmd
@@ -119,4 +124,26 @@ func (bs *BashSession) ExecuteWithTimeout(command string, timeout time.Duration)
 
 func (bs *BashSession) Execute(command string) (string, error) {
 	return bs.ExecuteWithTimeout(command, bs.defaultTimeout)
+}
+
+func (t BashTool) Invoke(params any) (string, error) {
+	p, ok := params.(toolschema.BashToolInput)
+	if !ok {
+		return "", fmt.Errorf("Unable to parse invoke params for BashTool: '%v'", params)
+	}
+
+	if t.bs == nil || p.Restart {
+		var err error
+		t.bs, err = NewBashSession()
+
+		if err != nil {
+			return "", fmt.Errorf("Error initializing Bash Session: %w", err)
+		}
+	}
+
+	if p.Command != "" {
+		return t.bs.Execute(p.Command)
+	}
+
+	return "", nil
 }
