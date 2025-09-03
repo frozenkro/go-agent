@@ -1,21 +1,28 @@
 package anthropic
 
 type Message struct {
-	Role    string    `json:"role"`
+	Role    Role      `json:"role"`
 	Content []Content `json:"content"`
 }
 
+type Role string
+
+const (
+	USER      Role = "user"
+	ASSISTANT Role = "assistant"
+)
+
 type ToolConfiguration struct {
-	AllowedTools []string `json:"allowed_tools"`
-	Enabled      bool     `json:"enabled"`
+	AllowedTools []string `json:"allowed_tools,omitempty"`
+	Enabled      bool     `json:"enabled,omitempty"`
 }
 
 type MCPServer struct {
 	Name               string            `json:"name"`
 	Type               string            `json:"type"`
 	Url                string            `json:"url"`
-	AuthorizationToken string            `json:"authorization_token"`
-	ToolConfiguration  ToolConfiguration `json:"tool_configuration"`
+	AuthorizationToken string            `json:"authorization_token,omitempty"`
+	ToolConfiguration  ToolConfiguration `json:"tool_configuration,omitempty"`
 }
 
 type Metadata struct {
@@ -53,7 +60,7 @@ func (t BaseTool) GetName() ToolName {
 
 type BashTool struct {
 	BaseTool
-	CacheControl CacheControl `json:"cache_control"`
+	CacheControl CacheControl `json:"cache_control,omitempty"`
 }
 
 func NewBashTool() BashTool {
@@ -65,7 +72,7 @@ func NewBashTool() BashTool {
 
 type TextEditorTool struct {
 	BaseTool
-	CacheControl  CacheControl `json:"cache_control"`
+	CacheControl  CacheControl `json:"cache_control,omitempty"`
 	MaxCharacters int          `json:"max_characters"`
 }
 
@@ -90,22 +97,22 @@ type CacheControl struct {
 }
 
 type AnthropicMessagesRequest struct {
-	Model         string              `json:"model"`
+	Model         Model               `json:"model"`
 	Messages      []Message           `json:"messages"`
 	MaxTokens     int                 `json:"max_tokens"`
-	Container     string              `json:"container"`
-	MCPServers    []MCPServer         `json:"mcp_servers"`
-	Metadata      Metadata            `json:"metadata"`
-	ServiceTier   string              `json:"service_tier"`
-	StopSequences []string            `json:"stop_sequences"`
-	Stream        bool                `json:"stream"`
-	System        string              `json:"system"` //System prompt
-	Temperature   float32             `json:"temperature"`
-	Thinking      ThinkingData        `json:"thinking"`
-	ToolChoice    any                 `json:"tool_choice"`
-	Tools         []AnthropicToolSpec `json:"tools"`
-	TopK          int                 `json:"top_k"`
-	TopP          int                 `json:"top_p"`
+	Container     string              `json:"container,omitempty"`
+	MCPServers    []MCPServer         `json:"mcp_servers,omitempty"`
+	Metadata      Metadata            `json:"metadata,omitempty"`
+	ServiceTier   string              `json:"service_tier,omitempty"`
+	StopSequences []string            `json:"stop_sequences,omitempty"`
+	Stream        bool                `json:"stream,omitempty"`
+	System        string              `json:"system,omitempty"` //System prompt
+	Temperature   float32             `json:"temperature,omitempty"`
+	Thinking      ThinkingData        `json:"thinking,omitempty"`
+	ToolChoice    any                 `json:"tool_choice,omitempty"`
+	Tools         []AnthropicToolSpec `json:"tools,omitempty"`
+	TopK          int                 `json:"top_k,omitempty"`
+	TopP          int                 `json:"top_p,omitempty"`
 }
 
 type Model string
@@ -113,5 +120,3 @@ type Model string
 const (
 	SONNET_4 Model = "claude-sonnet-4-20250514"
 )
-
-type AnthropicMessagesRequestOption func(*AnthropicMessagesRequest)

@@ -9,9 +9,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/frozenkro/go-agent/internal/agents"
-	"github.com/frozenkro/go-agent/internal/models/anthropic"
-	"github.com/frozenkro/go-agent/internal/options"
+	"github.com/frozenkro/go-agent/agents"
+	"github.com/frozenkro/go-agent/models/anthropic"
 	"github.com/joho/godotenv"
 )
 
@@ -20,7 +19,7 @@ const TEST_PROMPT = "List all files in the current directory"
 
 type AnthropicHandler interface {
 	HandleResponse(anthropic.AnthropicMessagesResponse) (anthropic.AnthropicMessagesRequest, bool, error)
-	InitRequest(anthropic.Model, string, ...anthropic.AnthropicMessagesRequestOption)
+	GetRequest(anthropic.Model, string, ...agents.AnthropicAgentOption)
 }
 
 func main() {
@@ -33,12 +32,12 @@ func main() {
 	ctx := context.Background()
 	godotenv.Load()
 
-	anthropicAgent, err := agents.NewAnthropicAgent()
+	anthropicAgent, err := agents.NewAnthropicAgent(anthropic.SONNET_4, TEST_PROMPT, agents.WithTools(anthropic.BASH))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	request = anthropicAgent.InitRequest(anthropic.SONNET_4, TEST_PROMPT, options.WithTools(anthropic.BASH))
+	request = anthropicAgent.GetRequest()
 
 	for {
 		reqJson, err := json.Marshal(request)

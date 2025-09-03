@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	toolschema "github.com/frozenkro/go-agent/internal/models/anthropic/tool_schema"
+	toolschema "github.com/frozenkro/go-agent/models/anthropic/tool_schema"
 	"github.com/google/uuid"
 )
 
