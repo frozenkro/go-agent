@@ -21,11 +21,12 @@ func WithTools(toolNames ...anthropic.ToolName) AnthropicAgentOption {
 
 		toolMap := tools.InitToolMap()
 
-		for _, toolName := range toolNames {
+		a.Tools = make([]anthropic.AnthropicToolSpec, len(toolNames))
+		for i, toolName := range toolNames {
 			toolMeta, err := toolMap.ToolMetaByName(toolName)
 
 			if err == nil {
-				a.Tools = append(a.Tools, toolMeta.Spec)
+				a.Tools[i] = toolMeta.Spec
 			} else {
 				log.Printf(err.Error())
 			}
@@ -54,7 +55,6 @@ func NewAnthropicAgent(model anthropic.Model, prompt string, opts ...AnthropicAg
 		Model:     model,
 		MaxTokens: 1024,
 		Messages:  messages,
-		Tools:     []anthropic.AnthropicToolSpec{},
 	}
 
 	for _, opt := range opts {
@@ -62,7 +62,7 @@ func NewAnthropicAgent(model anthropic.Model, prompt string, opts ...AnthropicAg
 	}
 
 	return AnthropicAgent{
-		requestContext: &anthropic.AnthropicMessagesRequest{},
+		requestContext: req,
 		toolInvoker:    ti,
 	}, nil
 }
@@ -71,7 +71,7 @@ func (a *AnthropicAgent) GetRequest() *anthropic.AnthropicMessagesRequest {
 	return a.requestContext
 }
 
-func (a *AnthropicAgent) HandleResponse(response *anthropic.AnthropicMessagesResponse) (*anthropic.AnthropicMessagesRequest, bool, error) {
+func (a *AnthropicAgent) HandleResponse(response *anthropic.MessagesResponse) (*anthropic.AnthropicMessagesRequest, bool, error) {
 
 	currentContent := response.Content[len(response.Content)-1]
 

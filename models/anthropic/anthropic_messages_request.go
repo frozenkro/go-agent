@@ -18,11 +18,11 @@ type ToolConfiguration struct {
 }
 
 type MCPServer struct {
-	Name               string            `json:"name"`
-	Type               string            `json:"type"`
-	Url                string            `json:"url"`
-	AuthorizationToken string            `json:"authorization_token,omitempty"`
-	ToolConfiguration  ToolConfiguration `json:"tool_configuration,omitempty"`
+	Name               string             `json:"name"`
+	Type               string             `json:"type"`
+	Url                string             `json:"url"`
+	AuthorizationToken string             `json:"authorization_token,omitempty"`
+	ToolConfiguration  *ToolConfiguration `json:"tool_configuration,omitempty"`
 }
 
 type Metadata struct {
@@ -60,27 +60,25 @@ func (t BaseTool) GetName() ToolName {
 
 type BashTool struct {
 	BaseTool
-	CacheControl CacheControl `json:"cache_control,omitempty"`
+	CacheControl *CacheControl `json:"cache_control"`
 }
 
 func NewBashTool() BashTool {
 	return BashTool{
-		BaseTool:     BaseTool{Type: "bash_20250124", Name: BASH},
-		CacheControl: CacheControl{},
+		BaseTool: BaseTool{Type: "bash_20250124", Name: BASH},
 	}
 }
 
 type TextEditorTool struct {
 	BaseTool
-	CacheControl  CacheControl `json:"cache_control,omitempty"`
-	MaxCharacters int          `json:"max_characters"`
+	MaxCharacters int           `json:"max_characters"`
+	CacheControl  *CacheControl `json:"cache_control"`
 }
 
 func NewTextEditorTool() TextEditorTool {
 	return TextEditorTool{
 		BaseTool:      BaseTool{Type: "text_editor_20250728", Name: TEXT_EDITOR},
 		MaxCharacters: 10000,
-		CacheControl:  CacheControl{},
 	}
 }
 
@@ -92,8 +90,8 @@ const (
 )
 
 type CacheControl struct {
-	Type string   `json:"type"`
-	TTL  CacheTTL `json:"ttl"`
+	Type string   `json:"type,omitempty"`
+	TTL  CacheTTL `json:"ttl,omitempty"`
 }
 
 type AnthropicMessagesRequest struct {
@@ -102,13 +100,13 @@ type AnthropicMessagesRequest struct {
 	MaxTokens     int                 `json:"max_tokens"`
 	Container     string              `json:"container,omitempty"`
 	MCPServers    []MCPServer         `json:"mcp_servers,omitempty"`
-	Metadata      Metadata            `json:"metadata,omitempty"`
+	Metadata      *Metadata           `json:"metadata,omitempty"`
 	ServiceTier   string              `json:"service_tier,omitempty"`
 	StopSequences []string            `json:"stop_sequences,omitempty"`
 	Stream        bool                `json:"stream,omitempty"`
 	System        string              `json:"system,omitempty"` //System prompt
 	Temperature   float32             `json:"temperature,omitempty"`
-	Thinking      ThinkingData        `json:"thinking,omitempty"`
+	Thinking      *ThinkingData       `json:"thinking,omitempty"`
 	ToolChoice    any                 `json:"tool_choice,omitempty"`
 	Tools         []AnthropicToolSpec `json:"tools,omitempty"`
 	TopK          int                 `json:"top_k,omitempty"`

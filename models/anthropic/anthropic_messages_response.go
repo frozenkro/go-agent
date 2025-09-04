@@ -4,21 +4,39 @@ import (
 	"encoding/json"
 )
 
-// Updated response struct
-type AnthropicMessagesResponse struct {
+type MessagesBaseResponse struct {
+	Type string `json:"type"`
+}
+
+func (r MessagesBaseResponse) GetType() string {
+	return r.Type
+}
+
+type MessagesResponse struct {
+	MessagesBaseResponse
 	ID         string    `json:"id"`
-	Type       string    `json:"type"`
 	Role       string    `json:"role"`
 	Content    []Content `json:"-"`
 	Model      string    `json:"model"`
 	StopReason string    `json:"stop_reason"`
 	Usage      any       `json:"usage"`
-	Container  Container `json:"container"`
+	Container  Container `json:"container,omitempty"`
+}
+
+type MessagesErrorResponse struct {
+	MessagesBaseResponse
+	Error     MessagesError `json:"error"`
+	RequestId string        `json:"request_id"`
+}
+
+type MessagesError struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
 }
 
 // Custom unmarshaling for the response
-func (r *AnthropicMessagesResponse) UnmarshalJSON(data []byte) error {
-	type Alias AnthropicMessagesResponse
+func (r *MessagesResponse) UnmarshalJSON(data []byte) error {
+	type Alias MessagesResponse
 	aux := &struct {
 		Content json.RawMessage `json:"content"`
 		*Alias
@@ -48,7 +66,7 @@ type ServerToolUse struct {
 	WebSearchRequests int `json:"web_search_requests"`
 }
 
-type AnthropicMessagesUsage struct {
+type MessagesUsage struct {
 	CacheCreation            CacheCreation `json:"cache_creation"`
 	CacheCreationInputTokens int           `json:"cache_creation_input_tokens"`
 	CacheReadInputTokens     int           `json:"cache_read_input_tokens"`

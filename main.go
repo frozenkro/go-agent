@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -18,14 +19,14 @@ const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 const TEST_PROMPT = "List all files in the current directory"
 
 type AnthropicHandler interface {
-	HandleResponse(anthropic.AnthropicMessagesResponse) (anthropic.AnthropicMessagesRequest, bool, error)
+	HandleResponse(anthropic.MessagesResponse) (anthropic.AnthropicMessagesRequest, bool, error)
 	GetRequest(anthropic.Model, string, ...agents.AnthropicAgentOption)
 }
 
 func main() {
 	var (
 		request  *anthropic.AnthropicMessagesRequest
-		response *anthropic.AnthropicMessagesResponse
+		response *anthropic.MessagesResponse
 		done     bool
 	)
 
@@ -49,8 +50,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		err = checkMessagesResponseErr(resBytes)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
-		response = &anthropic.AnthropicMessagesResponse{}
+		response = &anthropic.MessagesResponse{}
 		err = json.Unmarshal(resBytes, response)
 		if err != nil {
 			log.Fatal(err.Error())
@@ -92,4 +97,21 @@ func postMessage(ctx context.Context, body string) ([]byte, error) {
 
 	log.Printf("Response:\n%v", string(content))
 	return content, nil
+}
+
+func checkMessagesResponseErr(data []byte) error {
+	baseRes := &anthropic.MessagesBaseResponse{}
+	if err := json.Unmarshal(data, baseRes); err != nil {
+		return err
+	}
+
+	if baseRes.Type == "error" {
+		errRes := &anthropic.MessagesErrorResponse{}
+		if err := json.Unmarshal(data, errRes); err != nil {
+			return err
+		}
+
+		return fmt.Errorf("Anthropic error {type: '%v' message: '%v'}", errRes.Error.Type, errRes.Error.Message)
+	}
+	return nil
 }
