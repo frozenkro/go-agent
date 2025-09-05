@@ -1,8 +1,10 @@
-package anthropic
+package content
 
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/frozenkro/go-agent/models/anthropic/tools"
 )
 
 type ContentTypes string
@@ -54,9 +56,9 @@ type RedactedThinkingContent struct {
 
 type ToolUseContent struct {
 	BaseContent
-	Id    string   `json:"id"`
-	Name  ToolName `json:"name"`
-	Input any      `json:"input"`
+	Id    string         `json:"id"`
+	Name  tools.ToolName `json:"name"`
+	Input any            `json:"input"`
 }
 
 type ToolResultContent struct {

@@ -2,6 +2,8 @@ package anthropic
 
 import (
 	"encoding/json"
+
+	"github.com/frozenkro/go-agent/models/anthropic/content"
 )
 
 type MessagesBaseResponse struct {
@@ -14,13 +16,13 @@ func (r MessagesBaseResponse) GetType() string {
 
 type MessagesResponse struct {
 	MessagesBaseResponse
-	ID         string    `json:"id"`
-	Role       string    `json:"role"`
-	Content    []Content `json:"-"`
-	Model      string    `json:"model"`
-	StopReason string    `json:"stop_reason"`
-	Usage      any       `json:"usage"`
-	Container  Container `json:"container,omitempty"`
+	ID         string            `json:"id"`
+	Role       string            `json:"role"`
+	Content    []content.Content `json:"-"`
+	Model      string            `json:"model"`
+	StopReason StopReason        `json:"stop_reason"`
+	Usage      any               `json:"usage"`
+	Container  Container         `json:"container,omitempty"`
 }
 
 type MessagesErrorResponse struct {
@@ -48,7 +50,7 @@ func (r *MessagesResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	contents, err := UnmarshalContents(aux.Content)
+	contents, err := content.UnmarshalContents(aux.Content)
 	if err != nil {
 		return err
 	}
@@ -80,3 +82,14 @@ type Container struct {
 	ExpiresAt string `json:"expires_at"`
 	Id        string `json:"id"`
 }
+
+type StopReason string
+
+const (
+	END_TURN      StopReason = "end_turn"
+	MAX_TOKENS    StopReason = "max_tokens"
+	STOP_SEQUENCE StopReason = "stop_sequence"
+	TOOL_USE      StopReason = "tool_use"
+	PAUSE_TURN    StopReason = "pause_turn"
+	REFUSAL       StopReason = "refusal"
+)

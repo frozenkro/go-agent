@@ -2,13 +2,14 @@ package bash
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
 	"strings"
 	"time"
 
-	toolschema "github.com/frozenkro/go-agent/models/anthropic/tool_schema"
+	toolModels "github.com/frozenkro/go-agent/models/anthropic/tools"
 	"github.com/google/uuid"
 )
 
@@ -56,7 +57,7 @@ func NewBashSession(opts ...BashSessionOption) (*BashSession, error) {
 	}
 
 	sessionId := uuid.New()
-	stdInPrompt := fmt.Sprintf("'__READY_%v__'\n", sessionId)
+	stdInPrompt := fmt.Sprintf("'__READY_%v__'", sessionId)
 
 	defaultTimeout, err := time.ParseDuration("1m")
 	if err != nil {
@@ -75,12 +76,9 @@ func NewBashSession(opts ...BashSessionOption) (*BashSession, error) {
 		opt(bs)
 	}
 
-	bs.stdin.Write([]byte(fmt.Sprintf("PS1=%v", stdInPrompt)))
-	for {
-		line, _ := bs.stdout.ReadString('\n')
-		if strings.Contains(line, stdInPrompt) {
-			break
-		}
+	_, err = bs.Execute(fmt.Sprintf("PS1=%v\n", stdInPrompt))
+	if err != nil {
+		return nil, err
 	}
 
 	return bs, nil
@@ -127,12 +125,18 @@ func (bs *BashSession) Execute(command string) (string, error) {
 }
 
 func (t BashTool) Invoke(params any) (string, error) {
-	p, ok := params.(toolschema.BashToolInput)
-	if !ok {
-		return "", fmt.Errorf("Unable to parse invoke params for BashTool: '%v'", params)
+	bytes, err := json.Marshal(params)
+	if err != nil {
+		return "", fmt.Errorf("Unable to marshal invoke params for BashTool: '%v'", params)
 	}
 
-	if t.bs == nil || p.Restart {
+	var input toolModels.BashToolInput
+	err = json.Unmarshal(bytes, &input)
+	if err != nil {
+		return "", fmt.Errorf("Unable to unmarshal invoke params for BashTool: '%v'", params)
+	}
+
+	if t.bs == nil || input.Restart {
 		var err error
 		t.bs, err = NewBashSession()
 
@@ -141,8 +145,8 @@ func (t BashTool) Invoke(params any) (string, error) {
 		}
 	}
 
-	if p.Command != "" {
-		return t.bs.Execute(p.Command)
+	if input.Command != "" {
+		return t.bs.Execute(input.Command)
 	}
 
 	return "", nil

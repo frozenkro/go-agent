@@ -12,6 +12,7 @@ import (
 
 	"github.com/frozenkro/go-agent/agents"
 	"github.com/frozenkro/go-agent/models/anthropic"
+	"github.com/frozenkro/go-agent/models/anthropic/tools"
 	"github.com/joho/godotenv"
 )
 
@@ -33,7 +34,7 @@ func main() {
 	ctx := context.Background()
 	godotenv.Load()
 
-	anthropicAgent, err := agents.NewAnthropicAgent(anthropic.SONNET_4, TEST_PROMPT, agents.WithTools(anthropic.BASH))
+	anthropicAgent, err := agents.NewAnthropicAgent(anthropic.SONNET_4, TEST_PROMPT, agents.WithTools(tools.BASH))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
