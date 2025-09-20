@@ -19,6 +19,9 @@ func (t *ToolInvoker) Invoke(toolUseContent anthropic.ToolUseContent) (anthropic
 		return anthropic.ToolResultContent{}, err
 	}
 	result, err := toolMeta.Tool.Invoke(toolUseContent.Input)
+	if err != nil {
+		return anthropic.ToolResultContent{}, err
+	}
 
 	toolResultContent := anthropic.ToolResultContent{
 		BaseContent: anthropic.BaseContent{Type: anthropic.TOOL_RESULT},

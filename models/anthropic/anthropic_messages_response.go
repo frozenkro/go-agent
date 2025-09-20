@@ -14,13 +14,13 @@ func (r MessagesBaseResponse) GetType() string {
 
 type MessagesResponse struct {
 	MessagesBaseResponse
-	ID         string    `json:"id"`
-	Role       string    `json:"role"`
-	Content    []Content `json:"-"`
-	Model      string    `json:"model"`
-	StopReason string    `json:"stop_reason"`
-	Usage      any       `json:"usage"`
-	Container  Container `json:"container,omitempty"`
+	ID         string     `json:"id"`
+	Role       string     `json:"role"`
+	Content    []Content  `json:"-"`
+	Model      string     `json:"model"`
+	StopReason StopReason `json:"stop_reason"`
+	Usage      any        `json:"usage"`
+	Container  Container  `json:"container,omitempty"`
 }
 
 type MessagesErrorResponse struct {
@@ -80,3 +80,14 @@ type Container struct {
 	ExpiresAt string `json:"expires_at"`
 	Id        string `json:"id"`
 }
+
+type StopReason string
+
+const (
+	SR_END_TURN      StopReason = "end_turn"
+	SR_MAX_TOKENS    StopReason = "max_tokens"
+	SR_STOP_SEQUENCE StopReason = "stop_sequence"
+	SR_TOOL_USE      StopReason = "tool_use"
+	SR_PAUSE_TURN    StopReason = "pause_turn"
+	SR_REFUSAL       StopReason = "refusal"
+)

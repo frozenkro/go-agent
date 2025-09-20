@@ -1,15 +1,22 @@
 package bash
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
-	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/creack/pty"
 	toolschema "github.com/frozenkro/go-agent/models/anthropic/tool_schema"
 	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
+)
+
+const (
+	BUFFER_SIZE      int           = 1024
+	BUFFER_POLL_RATE time.Duration = time.Millisecond * 10
 )
 
 type BashTool struct {
@@ -17,12 +24,16 @@ type BashTool struct {
 }
 
 type BashSession struct {
-	cmd            *exec.Cmd
-	stdin          io.WriteCloser
-	stdout         *bufio.Reader
-	stderr         *bufio.Reader
-	stdinPrompt    string
+	tty            tty
+	prompt         string
 	defaultTimeout time.Duration
+}
+
+type tty interface {
+	Write([]byte) (int, error)
+	Read([]byte) (int, error)
+	SetReadDeadline(time.Time) error
+	Close() error
 }
 
 type BashSessionOption func(*BashSession)
@@ -34,29 +45,15 @@ func WithTimeout(timeout time.Duration) BashSessionOption {
 }
 
 func NewBashSession(opts ...BashSessionOption) (*BashSession, error) {
-	cmd := exec.Command("bash", "--norc", "--noprofile")
+	cmd := exec.Command("bash", "--norc", "--noprofile", "-i")
 
-	stdin, err := cmd.StdinPipe()
+	f, err := pty.Start(cmd)
 	if err != nil {
-		return nil, err
-	}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
 
 	sessionId := uuid.New()
-	stdInPrompt := fmt.Sprintf("'__READY_%v__'\n", sessionId)
+	prompt := fmt.Sprintf("__READY_%v__", sessionId)
 
 	defaultTimeout, err := time.ParseDuration("1m")
 	if err != nil {
@@ -64,51 +61,32 @@ func NewBashSession(opts ...BashSessionOption) (*BashSession, error) {
 	}
 
 	bs := &BashSession{
-		cmd:            cmd,
-		stdin:          stdin,
-		stdout:         bufio.NewReader(stdout),
-		stderr:         bufio.NewReader(stderr),
-		stdinPrompt:    stdInPrompt,
+		tty:            f,
+		prompt:         prompt,
 		defaultTimeout: defaultTimeout,
 	}
 	for _, opt := range opts {
 		opt(bs)
 	}
 
-	bs.stdin.Write([]byte(fmt.Sprintf("PS1=%v", stdInPrompt)))
-	for {
-		line, _ := bs.stdout.ReadString('\n')
-		if strings.Contains(line, stdInPrompt) {
-			break
-		}
-	}
+	command := fmt.Sprintf("PS1=%v", prompt)
+	bs.Execute(command)
 
 	return bs, nil
 }
 
 func (bs *BashSession) ExecuteWithTimeout(command string, timeout time.Duration) (string, error) {
-	_, err := bs.stdin.Write([]byte(command + "\n"))
-	if err != nil {
-		return "", err
-	}
+	bs.sendCommand(command)
 
-	var output strings.Builder
 	done := make(chan string, 1)
 	errChan := make(chan error, 1)
 
 	go func() {
-		for {
-			line, err := bs.stdout.ReadString('\n')
-			if err != nil {
-				errChan <- err
-			}
-
-			if strings.Contains(line, bs.stdinPrompt) {
-				done <- output.String()
-				return
-			}
-
-			output.WriteString(line)
+		output, err := bs.getResponse(command)
+		if err != nil {
+			errChan <- err
+		} else {
+			done <- output
 		}
 	}()
 
@@ -127,9 +105,14 @@ func (bs *BashSession) Execute(command string) (string, error) {
 }
 
 func (t BashTool) Invoke(params any) (string, error) {
-	p, ok := params.(toolschema.BashToolInput)
-	if !ok {
+	var p toolschema.BashToolInput
+	err := mapstructure.Decode(params, &p)
+	if err != nil {
 		return "", fmt.Errorf("Unable to parse invoke params for BashTool: '%v'", params)
+	}
+
+	if t.bs != nil && p.Restart {
+		t.bs.Deinit()
 	}
 
 	if t.bs == nil || p.Restart {
@@ -147,3 +130,80 @@ func (t BashTool) Invoke(params any) (string, error) {
 
 	return "", nil
 }
+
+func (bs *BashSession) getResponse(command string) (string, error) {
+
+	buffer := make([]byte, BUFFER_SIZE)
+	accumulated := ""
+
+	for {
+		iterationTime := time.Now()
+		bs.tty.SetReadDeadline(iterationTime.Add(BUFFER_POLL_RATE))
+		n, err := bs.tty.Read(buffer)
+		if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
+			return "", err
+		}
+
+		if n > 0 {
+			chunk := string(buffer[:n])
+			accumulated += chunk
+		}
+
+		if bs.isAtPrompt(accumulated) {
+			result := strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(accumulated), bs.prompt), command)
+			return result, nil
+		} else {
+			time.Sleep(BUFFER_POLL_RATE)
+		}
+
+	}
+}
+
+func (bs *BashSession) isAtPrompt(accumulated string) bool {
+	cleanStr := strings.TrimSpace(accumulated)
+	endsInPrompt := strings.HasSuffix(cleanStr, bs.prompt)
+	endsInPromptInit := strings.HasSuffix(cleanStr, fmt.Sprintf("PS1=%v", bs.prompt))
+	return endsInPrompt && !endsInPromptInit
+}
+
+func (bs *BashSession) sendCommand(c string) {
+	bs.tty.Write([]byte(c))
+	bs.tty.Write([]byte("\n"))
+}
+
+func (bs *BashSession) Deinit() {
+	if bs.tty != nil {
+		// First write an EOT to indicate end of `bash` command
+		bs.tty.Write([]byte{4})
+		time.Sleep(time.Millisecond * 100)
+
+		// Close file descriptor for character device
+		bs.tty.Close()
+	}
+}
+
+// TODO Repurpose original implementation into tests
+// func main() {
+// 	c := exec.Command("bash", "-i")
+// 	f, err := pty.Start(c)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	command := fmt.Sprintf("PS1='%v'", PROMPT)
+// 	sendCommand(f, command)
+// 	fmt.Print(getResponse(f, command))
+
+// 	command = "ls -al"
+// 	sendCommand(f, command)
+// 	fmt.Print(getResponse(f, command))
+
+// 	command = "pwd"
+// 	sendCommand(f, command)
+// 	fmt.Print(getResponse(f, command))
+
+// 	f.Write([]byte{4}) // EOT
+
+// 	fmt.Println("\nCompleted..")
+
+// }

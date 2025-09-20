@@ -72,28 +72,61 @@ func (a *AnthropicAgent) GetRequest() *anthropic.AnthropicMessagesRequest {
 }
 
 func (a *AnthropicAgent) HandleResponse(response *anthropic.MessagesResponse) (*anthropic.AnthropicMessagesRequest, bool, error) {
+	complete := false
 
-	currentContent := response.Content[len(response.Content)-1]
-
-	newMessage := anthropic.Message{
-		Role: anthropic.USER,
+	sysMsg := anthropic.Message{
+		Role:    anthropic.ASSISTANT,
+		Content: response.Content,
 	}
+	a.requestContext.Messages = append(a.requestContext.Messages, sysMsg)
 
-	switch currentContent.GetType() {
-	case anthropic.TOOL_USE:
-		toolUseContent, ok := currentContent.(*anthropic.ToolUseContent)
-		if !ok {
-			return nil, false, fmt.Errorf("Response content did not properly parse")
-		}
-
-		toolResultContent, err := a.toolInvoker.Invoke(*toolUseContent)
+	// TODO Handle these reasons appropriately
+	switch response.StopReason {
+	case anthropic.SR_END_TURN:
+		complete = true
+	case anthropic.SR_MAX_TOKENS:
+		complete = true
+	case anthropic.SR_STOP_SEQUENCE:
+		complete = true
+	case anthropic.SR_PAUSE_TURN:
+		complete = true
+	case anthropic.SR_REFUSAL:
+		complete = true
+	case anthropic.SR_TOOL_USE:
+		usrMsg, err := a.getToolCallResponses(response.Content)
 		if err != nil {
-			return nil, false, fmt.Errorf("Error occurred during tool invocation for tool '%v':\n%w", toolUseContent.Name, err)
+			return a.requestContext, complete, err
 		}
-
-		newMessage.Content = []anthropic.Content{toolResultContent}
-
+		a.requestContext.Messages = append(a.requestContext.Messages, usrMsg)
 	}
 
-	return &anthropic.AnthropicMessagesRequest{}, false, nil
+	return a.requestContext, complete, nil
+}
+
+func (a *AnthropicAgent) getToolCallResponses(content []anthropic.Content) (anthropic.Message, error) {
+	usrMsg := anthropic.Message{
+		Role:    anthropic.USER,
+		Content: []anthropic.Content{},
+	}
+
+	for _, c := range content {
+
+		if c.GetType() == anthropic.TOOL_USE {
+
+			toolUseContent, ok := c.(*anthropic.ToolUseContent)
+			if !ok {
+				return usrMsg, fmt.Errorf("Response content did not properly parse")
+			}
+
+			toolResultContent, err := a.toolInvoker.Invoke(*toolUseContent)
+			if err != nil {
+				return usrMsg, fmt.Errorf("Error occurred during tool invocation for tool '%v':\n%w", toolUseContent.Name, err)
+			}
+
+			usrMsg.Content = append(usrMsg.Content, toolResultContent)
+		}
+	}
+
+	return usrMsg, nil
+
 }
