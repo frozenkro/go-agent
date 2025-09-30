@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/frozenkro/go-agent/internal/tools/bash"
+	"github.com/frozenkro/go-agent/internal/tools/texteditor"
 	"github.com/frozenkro/go-agent/models/anthropic"
 )
 
@@ -28,7 +29,7 @@ func InitToolMap() *ToolMap {
 	toolNameMap[anthropic.TEXT_EDITOR] = ToolMeta{
 		Name: anthropic.TEXT_EDITOR,
 		Spec: anthropic.NewTextEditorTool(),
-		Tool: nil, //TODO
+		Tool: texteditor.TextEditorTool{},
 	}
 
 	return &ToolMap{
