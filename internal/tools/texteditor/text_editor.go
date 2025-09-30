@@ -52,7 +52,7 @@ func (t TextEditorTool) HandleStrReplace(params any) (string, error) {
 	var input toolschema.TextEditorToolInputStrReplace
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
 	}
 
 	// TODO
@@ -63,7 +63,7 @@ func (t TextEditorTool) HandleCreate(params any) (string, error) {
 	var input toolschema.TextEditorToolInputCreate
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
 	}
 
 	// TODO
@@ -74,7 +74,7 @@ func (t TextEditorTool) HandleInsert(params any) (string, error) {
 	var input toolschema.TextEditorToolInputInsert
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
 	}
 
 	// TODO
@@ -85,7 +85,7 @@ func (t TextEditorTool) HandleUndoEdit(params any) (string, error) {
 	var input toolschema.TextEditorToolInputUndoEdit
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
 	}
 
 	// TODO
