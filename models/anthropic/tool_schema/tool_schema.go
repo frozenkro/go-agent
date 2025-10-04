@@ -12,7 +12,7 @@ type BaseTextEditorToolInput struct {
 
 type TextEditorToolInputView struct {
 	BaseTextEditorToolInput
-	ViewRange string `json:"view_range"`
+	ViewRange string `json:"view_range,omitempty"`
 }
 
 type TextEditorToolInputStrReplace struct {
