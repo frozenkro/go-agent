@@ -119,9 +119,23 @@ func (w TextEditorWorker) HandleStrReplace(params any) (string, error) {
 		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
 	}
 
-	// TODO
+	// if strings.ContainsRune(input.OldStr, '\n') {
+	// 	return "", fmt.Errorf("Multi-line string replace not supported")
+	// }
 
-	return "", nil
+	fileContent, err := getFileContent(input.Path)
+	if err != nil {
+		return "", fmt.Errorf("Failed to get file content at %v: %w", input.Path, err)
+	}
+
+	newContent := strings.ReplaceAll(fileContent, input.OldStr, input.NewStr)
+
+	err = os.WriteFile(input.Path, []byte(newContent), 0644)
+	if err != nil {
+		return "", fmt.Errorf("Failed to write file %v: %w", input.Path, err)
+	}
+
+	return newContent, nil
 }
 
 // Handle request to create a file
@@ -132,9 +146,12 @@ func (w TextEditorWorker) HandleCreate(params any) (string, error) {
 		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
 	}
 
-	// TODO
+	err = os.WriteFile(input.Path, []byte(input.FileText), 0644)
+	if err != nil {
+		return "", fmt.Errorf("Failed to write file %v: %w", input.Path, err)
+	}
 
-	return "", nil
+	return input.FileText, nil
 }
 
 // Handle request to insert a string into a file at a specified line number
@@ -145,23 +162,59 @@ func (w TextEditorWorker) HandleInsert(params any) (string, error) {
 		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
 	}
 
-	// TODO
+	file, err := os.Open(input.Path)
+	if err != nil {
+		return "", fmt.Errorf("Failed to open file at path '%v': %w", input.Path, err)
+	}
+	// defer file.Close() // Manually closed after loop
+	scanner := bufio.NewScanner(file)
 
-	return "", nil
+	b := strings.Builder{}
+	scanning := true
+	lineNumber := 0
+	for {
+		lineNumber += 1
+
+		if lineNumber == input.InsertLine {
+			_, err := b.Write([]byte(input.NewStr))
+			if err != nil {
+				return "", fmt.Errorf("Failed to write to internal buffer: %w", err)
+			}
+
+			continue
+		}
+
+		scanning = scanner.Scan()
+		if !scanning {
+			break
+		}
+
+		line := scanner.Bytes()
+
+		b.Write(line)
+		b.Write([]byte("\n"))
+
+	}
+	file.Close()
+
+	err = os.WriteFile(input.Path, []byte(b.String()), 0644)
+	if err != nil {
+		return "", fmt.Errorf("Failed to write to %v: %w", input.Path, err)
+	}
+
+	return b.String(), nil
 }
 
 // Unsupported on claude 4, skipping implementation for the time being
 // Note for implementation - we will need to keep a stack of edits per-file per-session
 func (w TextEditorWorker) HandleUndoEdit(params any) (string, error) {
-	var input toolschema.TextEditorToolInputUndoEdit
-	err := mapstructure.Decode(params, &input)
-	if err != nil {
-		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
-	}
+	// var input toolschema.TextEditorToolInputUndoEdit
+	// err := mapstructure.Decode(params, &input)
+	// if err != nil {
+	// 	return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
+	// }
 
-	// TODO
-
-	return "", nil
+	return "", fmt.Errorf("UndoEdit operation unsupported")
 }
 
 func getViewRange(inputViewRange string) (int, int) {
@@ -177,4 +230,29 @@ func getViewRange(inputViewRange string) (int, int) {
 
 	// Requested lines are 1-indexed
 	return rangeArr[0] - 1, rangeArr[1] - 1
+}
+
+func getFileContent(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("Failed to open file at path '%v': %w", path, err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+
+	b := strings.Builder{}
+	scanning := true
+	for {
+		scanning = scanner.Scan()
+		line := scanner.Bytes()
+
+		b.Write(line)
+		b.Write([]byte("\n"))
+
+		if !scanning {
+			break
+		}
+	}
+
+	return b.String(), nil
 }
