@@ -55,15 +55,69 @@ func TestInvoke(t *testing.T) {
 	}
 }
 
-func TestHandleView_NoRange(t *testing.T) {
+func TestHandleView_Ranges(t *testing.T) {
+	const line1 = "1. Test Line 1"
+	const line2 = "2. Test Line 2"
+	const line3 = "3. Test Line 3"
+
+	testCases := []struct {
+		Name      string
+		Range     string
+		FirstLine string
+		LastLine  string
+	}{
+		{
+			Name:      "No Range",
+			Range:     "",
+			FirstLine: line1,
+			LastLine:  line3,
+		},
+		{
+			Name:      "Line 2 to End",
+			Range:     "[2,-1]",
+			FirstLine: line2,
+			LastLine:  line3,
+		},
+		{
+			Name:      "Line 1 to 2",
+			Range:     "[1,2]",
+			FirstLine: line1,
+			LastLine:  line2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+
+			params := map[string]any{}
+			params["path"] = "test_data/test_file.txt"
+			params["view_range"] = tc.Range
+
+			sut := TextEditorWorkerImpl{}
+			res, err := sut.HandleView(params)
+			assert.Nil(t, err)
+			if !assert.True(t, strings.HasPrefix(res, tc.FirstLine)) {
+				fmt.Printf("Test Results: %v", res)
+			}
+			if !assert.True(t, strings.HasSuffix(strings.Trim(res, "\n"), tc.LastLine)) {
+				fmt.Printf("Test Results: %v", res)
+			}
+		})
+	}
+
+}
+
+func TestHandleView_Directory(t *testing.T) {
+	file1 := "empty_file.txt"
+	file2 := "test_file.txt"
 	params := map[string]any{}
-	params["path"] = "test_data/test_file.txt"
+	params["path"] = "test_data"
 
 	sut := TextEditorWorkerImpl{}
 	res, err := sut.HandleView(params)
 	assert.Nil(t, err)
-	assert.True(t, strings.HasPrefix(res, "1. Test Line 1"))
-	assert.True(t, strings.HasSuffix(strings.Trim(res, "\n"), "3. Test Line 3"))
+	assert.True(t, strings.Contains(res, file1))
+	assert.True(t, strings.Contains(res, file2))
 }
 
 // func TestHandleStrReplace(t *testing.T) {
@@ -80,4 +134,5 @@ func TestHandleView_NoRange(t *testing.T) {
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
+
 // }

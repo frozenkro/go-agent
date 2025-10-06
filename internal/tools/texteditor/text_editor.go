@@ -63,8 +63,11 @@ func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 	}
 
 	// Handle directory view
-	dirChar := input.Path[len(input.Path)-1]
-	if dirChar == '/' || dirChar == '\\' {
+	fileInfo, err := os.Stat(input.Path)
+	if err != nil {
+		return "", fmt.Errorf("Failed to get stats for path '%v': %w", input.Path, err)
+	}
+	if fileInfo.IsDir() {
 		entries, err := os.ReadDir(input.Path)
 		if err != nil {
 			return "", fmt.Errorf("Failed to list directory contents for dir '%v': %w", input.Path, err)
@@ -75,7 +78,7 @@ func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 			var entry string
 			if v.IsDir() {
 				// Indicate to the requesting agent that the entry is a dir
-				entry = fmt.Sprintf("%v%c", v.Name(), dirChar)
+				entry = fmt.Sprintf("%v%c", v.Name(), '/')
 			} else {
 				entry = v.Name()
 			}
@@ -128,9 +131,13 @@ func continueReadFile(i int, end int) bool {
 // Handle request to replace a string within a file
 func (w TextEditorWorkerImpl) HandleStrReplace(params any) (string, error) {
 	var input toolschema.TextEditorToolInputStrReplace
-	err := mapstructure.Decode(params, &input)
+	jsonParams, err := json.Marshal(params)
 	if err != nil {
-		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
+		return "", fmt.Errorf("Failed to marshal params during type conversion: %w", err)
+	}
+	err = json.Unmarshal(jsonParams, &input)
+	if err != nil {
+		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
 	// if strings.ContainsRune(input.OldStr, '\n') {
@@ -155,9 +162,13 @@ func (w TextEditorWorkerImpl) HandleStrReplace(params any) (string, error) {
 // Handle request to create a file
 func (w TextEditorWorkerImpl) HandleCreate(params any) (string, error) {
 	var input toolschema.TextEditorToolInputCreate
-	err := mapstructure.Decode(params, &input)
+	jsonParams, err := json.Marshal(params)
 	if err != nil {
-		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
+		return "", fmt.Errorf("Failed to marshal params during type conversion: %w", err)
+	}
+	err = json.Unmarshal(jsonParams, &input)
+	if err != nil {
+		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
 	err = os.WriteFile(input.Path, []byte(input.FileText), 0644)
@@ -171,9 +182,13 @@ func (w TextEditorWorkerImpl) HandleCreate(params any) (string, error) {
 // Handle request to insert a string into a file at a specified line number
 func (w TextEditorWorkerImpl) HandleInsert(params any) (string, error) {
 	var input toolschema.TextEditorToolInputInsert
-	err := mapstructure.Decode(params, &input)
+	jsonParams, err := json.Marshal(params)
 	if err != nil {
-		return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
+		return "", fmt.Errorf("Failed to marshal params during type conversion: %w", err)
+	}
+	err = json.Unmarshal(jsonParams, &input)
+	if err != nil {
+		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
 	file, err := os.Open(input.Path)
@@ -237,13 +252,26 @@ func getViewRange(inputViewRange string) (int, int) {
 	}
 
 	rangeArr := make([]int, 2)
-	err := json.Unmarshal([]byte(inputViewRange), rangeArr)
+	err := json.Unmarshal([]byte(inputViewRange), &rangeArr)
 	if err != nil {
 		return 0, -1
 	}
 
+	if len(rangeArr) != 2 {
+		return 0, -1
+	}
+
+	start := rangeArr[0]
+	end := rangeArr[1]
+
 	// Requested lines are 1-indexed
-	return rangeArr[0] - 1, rangeArr[1] - 1
+	if start > 0 {
+		start--
+	}
+	if end != -1 {
+		end--
+	}
+	return start, end
 }
 
 func getFileContent(path string) (string, error) {
