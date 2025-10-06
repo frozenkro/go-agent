@@ -21,11 +21,11 @@ type TextEditorTool struct {
 
 func NewTextEditorTool() *TextEditorTool {
 	return &TextEditorTool{
-		w: TextEditorWorker{},
+		w: TextEditorWorkerImpl{},
 	}
 }
 
-type TextEditorWorker struct{}
+type TextEditorWorkerImpl struct{}
 
 func (t TextEditorTool) Invoke(params any) (string, error) {
 	var base toolschema.BaseTextEditorToolInput
@@ -51,7 +51,7 @@ func (t TextEditorTool) Invoke(params any) (string, error) {
 }
 
 // Handle request to view a file or directory
-func (w TextEditorWorker) HandleView(params any) (string, error) {
+func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 	var input toolschema.TextEditorToolInputView
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
@@ -112,7 +112,7 @@ func (w TextEditorWorker) HandleView(params any) (string, error) {
 }
 
 // Handle request to replace a string within a file
-func (w TextEditorWorker) HandleStrReplace(params any) (string, error) {
+func (w TextEditorWorkerImpl) HandleStrReplace(params any) (string, error) {
 	var input toolschema.TextEditorToolInputStrReplace
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
@@ -139,7 +139,7 @@ func (w TextEditorWorker) HandleStrReplace(params any) (string, error) {
 }
 
 // Handle request to create a file
-func (w TextEditorWorker) HandleCreate(params any) (string, error) {
+func (w TextEditorWorkerImpl) HandleCreate(params any) (string, error) {
 	var input toolschema.TextEditorToolInputCreate
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
@@ -155,7 +155,7 @@ func (w TextEditorWorker) HandleCreate(params any) (string, error) {
 }
 
 // Handle request to insert a string into a file at a specified line number
-func (w TextEditorWorker) HandleInsert(params any) (string, error) {
+func (w TextEditorWorkerImpl) HandleInsert(params any) (string, error) {
 	var input toolschema.TextEditorToolInputInsert
 	err := mapstructure.Decode(params, &input)
 	if err != nil {
@@ -207,7 +207,7 @@ func (w TextEditorWorker) HandleInsert(params any) (string, error) {
 
 // Unsupported on claude 4, skipping implementation for the time being
 // Note for implementation - we will need to keep a stack of edits per-file per-session
-func (w TextEditorWorker) HandleUndoEdit(params any) (string, error) {
+func (w TextEditorWorkerImpl) HandleUndoEdit(params any) (string, error) {
 	// var input toolschema.TextEditorToolInputUndoEdit
 	// err := mapstructure.Decode(params, &input)
 	// if err != nil {
