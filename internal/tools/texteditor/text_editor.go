@@ -53,9 +53,13 @@ func (t TextEditorTool) Invoke(params any) (string, error) {
 // Handle request to view a file or directory
 func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 	var input toolschema.TextEditorToolInputView
-	err := mapstructure.Decode(params, &input)
+	jsonParams, err := json.Marshal(params)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to marshal params during type conversion: %w", err)
+	}
+	err = json.Unmarshal(jsonParams, &input)
+	if err != nil {
+		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
 	// Handle directory view
@@ -98,17 +102,27 @@ func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 
 	scanning := true
 	result := strings.Builder{}
-	for i := start; i == end+1; i++ {
+	for i := start; continueReadFile(i, end); i++ {
 		scanning = scanner.Scan()
 		if !scanning {
 			break
 		}
 
 		line := scanner.Text()
-		fmt.Fprintf(&result, "%c. %v\n", i+1, line)
+		fmt.Fprintf(&result, "%v. %v\n", i+1, line)
+
 	}
 
 	return result.String(), nil
+}
+
+func continueReadFile(i int, end int) bool {
+	// Keep reading until end of file
+	if end == -1 {
+		return true
+	}
+
+	return i <= end
 }
 
 // Handle request to replace a string within a file

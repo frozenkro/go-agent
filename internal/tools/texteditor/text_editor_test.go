@@ -2,6 +2,7 @@ package texteditor
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	mock_texteditor "github.com/frozenkro/go-agent/internal/tools/texteditor/mocks"
@@ -14,7 +15,7 @@ func getMockResult(x any) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("Parse Error in getMockResult")
 	}
-	command, ok := m["Command"].(string)
+	command, ok := m["command"].(string)
 	if !ok {
 		return "", fmt.Errorf("Parse Error in getMockResult")
 	}
@@ -45,7 +46,7 @@ func TestInvoke(t *testing.T) {
 		testName := fmt.Sprintf("TextEditorToolInvoke-%v", testCase)
 		t.Run(testName, func(t *testing.T) {
 			params := map[string]interface{}{}
-			params["Command"] = testCase
+			params["command"] = testCase
 
 			res, err := tool.Invoke(params)
 			assert.Nil(t, err)
@@ -53,3 +54,30 @@ func TestInvoke(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleView_NoRange(t *testing.T) {
+	params := map[string]any{}
+	params["path"] = "test_data/test_file.txt"
+
+	sut := TextEditorWorkerImpl{}
+	res, err := sut.HandleView(params)
+	assert.Nil(t, err)
+	assert.True(t, strings.HasPrefix(res, "1. Test Line 1"))
+	assert.True(t, strings.HasSuffix(strings.Trim(res, "\n"), "3. Test Line 3"))
+}
+
+// func TestHandleStrReplace(t *testing.T) {
+// 	src, err := os.Open("test_data/test_file.txt")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	err = os.Mkdir("test_results", 0644)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	dst, err := os.Create("test_results/test_file.txt")
+// 	_, err = io.Copy(dst, src)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// }
