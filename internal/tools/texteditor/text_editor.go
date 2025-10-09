@@ -206,6 +206,7 @@ func (w TextEditorWorkerImpl) HandleInsert(params any) (string, error) {
 
 		if lineNumber == input.InsertLine {
 			_, err := b.Write([]byte(input.NewStr))
+			b.Write([]byte("\n"))
 			if err != nil {
 				return "", fmt.Errorf("Failed to write to internal buffer: %w", err)
 			}
