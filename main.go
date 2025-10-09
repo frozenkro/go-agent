@@ -16,7 +16,9 @@ import (
 )
 
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
-const TEST_PROMPT = "List all files in the current directory"
+
+// const TEST_PROMPT = "List all files in the current directory"
+const TEST_PROMPT = "Use the text editor tool to insert lines into my fizzbuzz.sh"
 
 type AnthropicHandler interface {
 	HandleResponse(anthropic.MessagesResponse) (anthropic.AnthropicMessagesRequest, bool, error)
@@ -33,7 +35,7 @@ func main() {
 	ctx := context.Background()
 	godotenv.Load()
 
-	anthropicAgent, err := agents.NewAnthropicAgent(anthropic.SONNET_4, TEST_PROMPT, agents.WithTools(anthropic.BASH))
+	anthropicAgent, err := agents.NewAnthropicAgent(anthropic.SONNET_4, TEST_PROMPT, agents.WithTools(anthropic.BASH, anthropic.TEXT_EDITOR))
 	if err != nil {
 		log.Fatal(err.Error())
 	}

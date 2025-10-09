@@ -28,7 +28,7 @@ func WithTools(toolNames ...anthropic.ToolName) AnthropicAgentOption {
 			if err == nil {
 				a.Tools[i] = toolMeta.Spec
 			} else {
-				log.Printf(err.Error())
+				log.Printf("%v", err.Error())
 			}
 		}
 	}

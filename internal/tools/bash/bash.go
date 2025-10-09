@@ -1,3 +1,7 @@
+// Package bash provides a persistent bash session to be invoked as a tool by llm agents
+// Current implementation is specific to anthropic spec:
+// https://anthropic.mintlify.app/en/docs/agents-and-tools/tool-use/bash-tool
+
 package bash
 
 import (
