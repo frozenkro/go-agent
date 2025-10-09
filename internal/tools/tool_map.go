@@ -29,7 +29,7 @@ func InitToolMap() *ToolMap {
 	toolNameMap[anthropic.TEXT_EDITOR] = ToolMeta{
 		Name: anthropic.TEXT_EDITOR,
 		Spec: anthropic.NewTextEditorTool(),
-		Tool: texteditor.TextEditorTool{},
+		Tool: texteditor.NewTextEditorTool(),
 	}
 
 	return &ToolMap{
