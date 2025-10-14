@@ -8,16 +8,16 @@ import (
 	"github.com/frozenkro/go-agent/models/anthropic"
 )
 
-type AnthropicAgent struct {
-	requestContext *anthropic.AnthropicMessagesRequest
+type AnthropicRequestMgr struct {
+	requestContext *anthropic.MessagesRequest
 	toolInvoker    tools.ToolInvoker
 }
 
-type AnthropicAgentOption func(*anthropic.AnthropicMessagesRequest)
+type AnthropicRequestMgrOption func(*anthropic.MessagesRequest)
 
-func WithTools(toolNames ...anthropic.ToolName) AnthropicAgentOption {
+func WithTools(toolNames ...anthropic.ToolName) AnthropicRequestMgrOption {
 
-	return func(a *anthropic.AnthropicMessagesRequest) {
+	return func(a *anthropic.MessagesRequest) {
 
 		toolMap := tools.InitToolMap()
 
@@ -34,7 +34,13 @@ func WithTools(toolNames ...anthropic.ToolName) AnthropicAgentOption {
 	}
 }
 
-func NewAnthropicAgent(model anthropic.Model, prompt string, opts ...AnthropicAgentOption) (AnthropicAgent, error) {
+func WithMaxTokens(maxTokens int) AnthropicRequestMgrOption {
+	return func(a *anthropic.MessagesRequest) {
+		a.MaxTokens = maxTokens
+	}
+}
+
+func NewAnthropicClient(model anthropic.Model, prompt string, opts ...AnthropicRequestMgrOption) (AnthropicRequestMgr, error) {
 	ti := tools.NewToolInvoker()
 
 	messages := []anthropic.Message{
@@ -51,27 +57,26 @@ func NewAnthropicAgent(model anthropic.Model, prompt string, opts ...AnthropicAg
 		},
 	}
 
-	req := &anthropic.AnthropicMessagesRequest{
-		Model:     model,
-		MaxTokens: 1024,
-		Messages:  messages,
+	req := &anthropic.MessagesRequest{
+		Model:    model,
+		Messages: messages,
 	}
 
 	for _, opt := range opts {
 		opt(req)
 	}
 
-	return AnthropicAgent{
+	return AnthropicRequestMgr{
 		requestContext: req,
 		toolInvoker:    ti,
 	}, nil
 }
 
-func (a *AnthropicAgent) GetRequest() *anthropic.AnthropicMessagesRequest {
+func (a *AnthropicRequestMgr) GetRequest() *anthropic.MessagesRequest {
 	return a.requestContext
 }
 
-func (a *AnthropicAgent) HandleResponse(response *anthropic.MessagesResponse) (*anthropic.AnthropicMessagesRequest, bool, error) {
+func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesResponse) (*anthropic.MessagesRequest, bool, error) {
 	complete := false
 
 	sysMsg := anthropic.Message{
@@ -103,7 +108,7 @@ func (a *AnthropicAgent) HandleResponse(response *anthropic.MessagesResponse) (*
 	return a.requestContext, complete, nil
 }
 
-func (a *AnthropicAgent) getToolCallResponses(content []anthropic.Content) (anthropic.Message, error) {
+func (a *AnthropicRequestMgr) getToolCallResponses(content []anthropic.Content) (anthropic.Message, error) {
 	usrMsg := anthropic.Message{
 		Role:    anthropic.USER,
 		Content: []anthropic.Content{},
