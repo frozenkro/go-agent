@@ -207,11 +207,12 @@ func copyTestFile(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.MkdirAll(testResultsDir, 0744)
+	err = os.MkdirAll(testResultsDir, 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
 	dst, err := os.Create(fileName)
+	// dst, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
