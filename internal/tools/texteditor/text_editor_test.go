@@ -172,6 +172,24 @@ func TestHandleCreate(t *testing.T) {
 	assert.True(t, strings.HasSuffix(res, line2))
 }
 
+func TestHandleCreate_Nested(t *testing.T) {
+	fileName := fmt.Sprintf("%v/%v/%v.txt", testResultsDir, "nested", t.Name())
+	line1 := "Line 1"
+	line2 := "Line 2"
+	params := map[string]any{}
+	params["path"] = fileName
+	params["file_text"] = fmt.Sprintf("%v\n%v", line1, line2)
+
+	sut := TextEditorWorkerImpl{}
+	_, err := sut.HandleCreate(params)
+	assert.Nil(t, err)
+
+	written, err := os.ReadFile(fileName)
+	res := string(written)
+	assert.True(t, strings.HasPrefix(res, line1))
+	assert.True(t, strings.HasSuffix(res, line2))
+}
+
 func TestHandleInsert(t *testing.T) {
 	fileName := copyTestFile(t)
 	insert := "Line one point five"
@@ -212,7 +230,6 @@ func copyTestFile(t *testing.T) string {
 		t.Fatal(err)
 	}
 	dst, err := os.Create(fileName)
-	// dst, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}

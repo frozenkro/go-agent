@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/frozenkro/go-agent/agents"
+	apimgrs "github.com/frozenkro/go-agent/internal/api_mgrs"
 	"github.com/frozenkro/go-agent/models/anthropic"
 	"github.com/joho/godotenv"
 )
@@ -90,7 +90,7 @@ func (a *Agent) Run(task string) error {
 
 // RunWithContext executes the given task using the agent within a provided context
 func (a *Agent) RunWithContext(ctx context.Context, task string) error {
-	anthropicClient, err := agents.NewAnthropicClient(a.model, task, agents.WithTools(a.tools...))
+	anthropicClient, err := apimgrs.NewAnthropicClient(a.model, task, apimgrs.WithTools(a.tools...))
 	if err != nil {
 		return fmt.Errorf("failed to create anthropic agent: %w", err)
 	}
