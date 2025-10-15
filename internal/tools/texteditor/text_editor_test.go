@@ -17,6 +17,11 @@ const (
 	testDataDir    string = "test_data"
 )
 
+func TestMain(m *testing.M) {
+	_ = os.RemoveAll(testResultsDir)
+	m.Run()
+}
+
 func getMockResult(x any) (string, error) {
 	m, ok := x.(map[string]any)
 	if !ok {
