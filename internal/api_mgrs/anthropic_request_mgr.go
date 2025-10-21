@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/frozenkro/go-agent/internal/tools"
+	"github.com/frozenkro/go-agent/models"
 	"github.com/frozenkro/go-agent/models/anthropic"
 )
 
@@ -76,7 +77,7 @@ func (a *AnthropicRequestMgr) GetRequest() *anthropic.MessagesRequest {
 	return a.requestContext
 }
 
-func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesResponse) (*anthropic.MessagesRequest, bool, error) {
+func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesResponse, out chan models.AgentEvent) (*anthropic.MessagesRequest, bool, error) {
 	complete := false
 
 	sysMsg := anthropic.Message{
@@ -98,40 +99,53 @@ func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesRespons
 	case anthropic.SR_REFUSAL:
 		complete = true
 	case anthropic.SR_TOOL_USE:
-		usrMsg, err := a.getToolCallResponses(response.Content)
-		if err != nil {
-			return a.requestContext, complete, err
-		}
-		a.requestContext.Messages = append(a.requestContext.Messages, usrMsg)
+		complete = false
 	}
 
-	return a.requestContext, complete, nil
-}
-
-func (a *AnthropicRequestMgr) getToolCallResponses(content []anthropic.Content) (anthropic.Message, error) {
+	// Iterate over all response content to build subsequent request content and task context
 	usrMsg := anthropic.Message{
 		Role:    anthropic.USER,
 		Content: []anthropic.Content{},
 	}
+	for _, c := range response.Content {
 
-	for _, c := range content {
+		switch c.GetType() {
+		case anthropic.TOOL_USE:
 
-		if c.GetType() == anthropic.TOOL_USE {
-
-			toolUseContent, ok := c.(*anthropic.ToolUseContent)
-			if !ok {
-				return usrMsg, fmt.Errorf("Response content did not properly parse")
-			}
-
-			toolResultContent, err := a.toolInvoker.Invoke(*toolUseContent)
+			toolResultContent, err := a.handleToolUse(c, out)
 			if err != nil {
-				return usrMsg, fmt.Errorf("Error occurred during tool invocation for tool '%v':\n%w", toolUseContent.Name, err)
+				return nil, complete, err
 			}
 
 			usrMsg.Content = append(usrMsg.Content, toolResultContent)
+
+		case anthropic.TEXT:
+			textContent, ok := c.(anthropic.TextContent)
+			if !ok {
+				return nil, complete, fmt.Errorf("Response content did not properly parse")
+			}
+
+			out <- models.AgentEvent{Message: textContent.Text}
 		}
 	}
+	a.requestContext.Messages = append(a.requestContext.Messages, usrMsg)
 
-	return usrMsg, nil
+	return a.requestContext, complete, nil
+}
+
+func (a *AnthropicRequestMgr) handleToolUse(content anthropic.Content, out chan models.AgentEvent) (anthropic.ToolResultContent, error) {
+	toolUseContent, ok := content.(anthropic.ToolUseContent)
+	if !ok {
+		return anthropic.ToolResultContent{}, fmt.Errorf("Response content did not properly parse")
+	}
+
+	out <- models.AgentEvent{Message: fmt.Sprintf("[Tool Call]: %v", toolUseContent.Name)}
+
+	toolResultContent, err := a.toolInvoker.Invoke(toolUseContent)
+	if err != nil {
+		return anthropic.ToolResultContent{}, fmt.Errorf("Error occurred during tool invocation for tool '%v':\n%w", toolUseContent.Name, err)
+	}
+
+	return toolResultContent, nil
 
 }

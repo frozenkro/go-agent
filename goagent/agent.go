@@ -10,6 +10,7 @@ import (
 	"os"
 
 	apimgrs "github.com/frozenkro/go-agent/internal/api_mgrs"
+	"github.com/frozenkro/go-agent/models"
 	"github.com/frozenkro/go-agent/models/anthropic"
 	"github.com/joho/godotenv"
 )
@@ -84,53 +85,66 @@ func NewAgent(opts ...AgentOption) (*Agent, error) {
 }
 
 // Run executes the given task using the agent
-func (a *Agent) Run(task string) error {
+func (a *Agent) Run(task string) <-chan models.AgentEvent {
 	return a.RunWithContext(context.Background(), task)
 }
 
 // RunWithContext executes the given task using the agent within a provided context
-func (a *Agent) RunWithContext(ctx context.Context, task string) error {
-	anthropicClient, err := apimgrs.NewAnthropicClient(a.model, task, apimgrs.WithTools(a.tools...))
-	if err != nil {
-		return fmt.Errorf("failed to create anthropic agent: %w", err)
-	}
+func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.AgentEvent {
+	out := make(chan models.AgentEvent)
 
-	request := anthropicClient.GetRequest()
-	request.MaxTokens = a.maxTokens
+	go func() {
+		defer close(out)
 
-	for {
-		reqJson, err := json.Marshal(request)
+		anthropicClient, err := apimgrs.NewAnthropicClient(a.model,
+			task,
+			apimgrs.WithTools(a.tools...),
+			apimgrs.WithMaxTokens(a.maxTokens))
 		if err != nil {
-			return fmt.Errorf("failed to marshal request: %w", err)
+			out <- models.AgentEvent{Error: fmt.Errorf("failed to create anthropic agent: %w", err)}
+			return
 		}
 
-		resBytes, err := a.postMessage(ctx, string(reqJson))
-		if err != nil {
-			return fmt.Errorf("failed to send message: %w", err)
-		}
+		request := anthropicClient.GetRequest()
 
-		err = a.checkMessagesResponseErr(resBytes)
-		if err != nil {
-			return fmt.Errorf("API error: %w", err)
-		}
+		for {
+			reqJson, err := json.Marshal(request)
+			if err != nil {
+				out <- models.AgentEvent{Error: fmt.Errorf("failed to marshal request: %w", err)}
+				return
+			}
 
-		response := &anthropic.MessagesResponse{}
-		err = json.Unmarshal(resBytes, response)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
-		}
+			resBytes, err := a.postMessage(ctx, string(reqJson))
+			if err != nil {
+				out <- models.AgentEvent{Error: fmt.Errorf("failed to send message: %w", err)}
+				return
+			}
 
-		nextRequest, done, err := anthropicClient.HandleResponse(response)
-		if done {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to handle response: %w", err)
-		}
-		request = nextRequest
-	}
+			err = a.checkMessagesResponseErr(resBytes)
+			if err != nil {
+				out <- models.AgentEvent{Error: fmt.Errorf("API error: %w", err)}
+				return
+			}
 
-	return nil
+			response := &anthropic.MessagesResponse{}
+			err = json.Unmarshal(resBytes, response)
+			if err != nil {
+				out <- models.AgentEvent{Error: fmt.Errorf("failed to unmarshal response: %w", err)}
+				return
+			}
+
+			nextRequest, done, err := anthropicClient.HandleResponse(response, out)
+			if done {
+				break
+			}
+			if err != nil {
+				out <- models.AgentEvent{Error: fmt.Errorf("failed to handle response: %w", err)}
+				return
+			}
+			request = nextRequest
+		}
+	}()
+	return out
 }
 
 func (a *Agent) postMessage(ctx context.Context, body string) ([]byte, error) {

@@ -15,9 +15,13 @@ func main() {
 	}
 
 	// Run a simple task
-	err = agent.Run("List all files in the current directory")
-	if err != nil {
-		log.Fatal("Failed to run task:", err)
+	ch := agent.Run("List all files in the current directory")
+	for event := range ch {
+		if event.Error != nil {
+			log.Fatalf("Error: %v", event.Error)
+		}
+
+		log.Println(event.Message)
 	}
 
 	// Create an agent with custom options
@@ -31,8 +35,12 @@ func main() {
 	}
 
 	// Run a more complex task
-	err = customAgent.Run("Create a simple Go function that calculates fibonacci numbers and save it to fib.go")
-	if err != nil {
-		log.Fatal("Failed to run custom task:", err)
+	ch = customAgent.Run("Create a simple Go function that calculates fibonacci numbers and save it to fib.go")
+	for event := range ch {
+		if event.Error != nil {
+			log.Fatalf("Error: %v", event.Error)
+		}
+
+		log.Println(event.Message)
 	}
 }

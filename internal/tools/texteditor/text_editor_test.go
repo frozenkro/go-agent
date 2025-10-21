@@ -178,7 +178,7 @@ func TestHandleCreate(t *testing.T) {
 }
 
 func TestHandleCreate_Nested(t *testing.T) {
-	fileName := fmt.Sprintf("%v/%v/%v.txt", testResultsDir, "nested", t.Name())
+	fileName := fmt.Sprintf("%v/nested/%v.txt", testResultsDir, "nested", t.Name())
 	line1 := "Line 1"
 	line2 := "Line 2"
 	params := map[string]any{}

@@ -172,6 +172,10 @@ func (w TextEditorWorkerImpl) HandleCreate(params any) (string, error) {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
+	// Ensure "myFile", "./myFile", and "/myFile" all result in a write to "./myFile"
+	cleanInputPath := strings.TrimPrefix(input.Path, "/")
+	input.Path = fmt.Sprintf("./%v", cleanInputPath)
+
 	path := filepath.Dir(input.Path)
 	if err = os.MkdirAll(path, 0755); err != nil {
 		return "", fmt.Errorf("Failed to create directory %v: %w", path, err)
