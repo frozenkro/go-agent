@@ -120,7 +120,7 @@ func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesRespons
 			usrMsg.Content = append(usrMsg.Content, toolResultContent)
 
 		case anthropic.TEXT:
-			textContent, ok := c.(anthropic.TextContent)
+			textContent, ok := c.(*anthropic.TextContent)
 			if !ok {
 				return nil, complete, fmt.Errorf("Response content did not properly parse")
 			}
@@ -134,14 +134,14 @@ func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesRespons
 }
 
 func (a *AnthropicRequestMgr) handleToolUse(content anthropic.Content, out chan models.AgentEvent) (anthropic.ToolResultContent, error) {
-	toolUseContent, ok := content.(anthropic.ToolUseContent)
+	toolUseContent, ok := content.(*anthropic.ToolUseContent)
 	if !ok {
 		return anthropic.ToolResultContent{}, fmt.Errorf("Response content did not properly parse")
 	}
 
 	out <- models.AgentEvent{Message: fmt.Sprintf("[Tool Call]: %v", toolUseContent.Name)}
 
-	toolResultContent, err := a.toolInvoker.Invoke(toolUseContent)
+	toolResultContent, err := a.toolInvoker.Invoke(*toolUseContent)
 	if err != nil {
 		return anthropic.ToolResultContent{}, fmt.Errorf("Error occurred during tool invocation for tool '%v':\n%w", toolUseContent.Name, err)
 	}
