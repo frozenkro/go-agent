@@ -2,14 +2,15 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/frozenkro/go-agent/goagent"
 	"github.com/frozenkro/go-agent/models/anthropic"
 )
 
 func main() {
-	// Create a new agent with default settings
-	agent, err := goagent.NewAgent()
+	// Create a minimal bash agent with default settings
+	agent, err := goagent.NewAgent(goagent.WithTools(anthropic.BASH))
 	if err != nil {
 		log.Fatal("Failed to create agent:", err)
 	}
@@ -34,8 +35,10 @@ func main() {
 		log.Fatal("Failed to create custom agent:", err)
 	}
 
+	// clean up between example runs
+	os.Remove("fib/fib.go")
 	// Run a more complex task
-	ch = customAgent.Run("Create a simple Go function that calculates fibonacci numbers and save it to fib.go")
+	ch = customAgent.Run("Create a simple Go function that calculates fibonacci numbers and save it to fib/fib.go")
 	for event := range ch {
 		if event.Error != nil {
 			log.Fatalf("Error: %v", event.Error)
