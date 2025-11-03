@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	toolschema "github.com/frozenkro/go-agent/models/anthropic/tool_schema"
@@ -169,6 +170,15 @@ func (w TextEditorWorkerImpl) HandleCreate(params any) (string, error) {
 	err = json.Unmarshal(jsonParams, &input)
 	if err != nil {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
+	}
+
+	// Ensure "myFile", "./myFile", and "/myFile" all result in a write to "./myFile"
+	cleanInputPath := strings.TrimPrefix(input.Path, "/")
+	input.Path = fmt.Sprintf("./%v", cleanInputPath)
+
+	path := filepath.Dir(input.Path)
+	if err = os.MkdirAll(path, 0755); err != nil {
+		return "", fmt.Errorf("Failed to create directory %v: %w", path, err)
 	}
 
 	err = os.WriteFile(input.Path, []byte(input.FileText), 0644)

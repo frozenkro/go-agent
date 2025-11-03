@@ -17,6 +17,11 @@ const (
 	testDataDir    string = "test_data"
 )
 
+func TestMain(m *testing.M) {
+	_ = os.RemoveAll(testResultsDir)
+	m.Run()
+}
+
 func getMockResult(x any) (string, error) {
 	m, ok := x.(map[string]any)
 	if !ok {
@@ -172,6 +177,24 @@ func TestHandleCreate(t *testing.T) {
 	assert.True(t, strings.HasSuffix(res, line2))
 }
 
+func TestHandleCreate_Nested(t *testing.T) {
+	fileName := fmt.Sprintf("%v/nested/%v.txt", testResultsDir, "nested", t.Name())
+	line1 := "Line 1"
+	line2 := "Line 2"
+	params := map[string]any{}
+	params["path"] = fileName
+	params["file_text"] = fmt.Sprintf("%v\n%v", line1, line2)
+
+	sut := TextEditorWorkerImpl{}
+	_, err := sut.HandleCreate(params)
+	assert.Nil(t, err)
+
+	written, err := os.ReadFile(fileName)
+	res := string(written)
+	assert.True(t, strings.HasPrefix(res, line1))
+	assert.True(t, strings.HasSuffix(res, line2))
+}
+
 func TestHandleInsert(t *testing.T) {
 	fileName := copyTestFile(t)
 	insert := "Line one point five"
@@ -207,7 +230,7 @@ func copyTestFile(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.MkdirAll(testResultsDir, 0744)
+	err = os.MkdirAll(testResultsDir, 0755)
 	if err != nil {
 		t.Fatal(err)
 	}

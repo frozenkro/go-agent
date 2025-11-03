@@ -94,7 +94,7 @@ type CacheControl struct {
 	TTL  CacheTTL `json:"ttl,omitempty"`
 }
 
-type AnthropicMessagesRequest struct {
+type MessagesRequest struct {
 	Model         Model               `json:"model"`
 	Messages      []Message           `json:"messages"`
 	MaxTokens     int                 `json:"max_tokens"`

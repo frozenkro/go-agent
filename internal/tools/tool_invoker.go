@@ -13,6 +13,7 @@ func NewToolInvoker() ToolInvoker {
 	}
 }
 
+// Invoke will invoke any tool in the ToolMap, specified using toolUseContent.Name
 func (t *ToolInvoker) Invoke(toolUseContent anthropic.ToolUseContent) (anthropic.ToolResultContent, error) {
 	toolMeta, err := t.ToolMap.ToolMetaByName(anthropic.ToolName(toolUseContent.Name))
 	if err != nil {
