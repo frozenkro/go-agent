@@ -57,12 +57,6 @@ func WithMaxTokens(maxTokens int) AgentOption {
 	}
 }
 
-func WithOutput(writer *io.Writer) AgentOption {
-	return func(a *Agent) {
-		a.outputWriter = writer
-	}
-}
-
 // NewAgent creates a new Agent
 func NewAgent(opts ...AgentOption) (*Agent, error) {
 	godotenv.Load()
@@ -90,6 +84,7 @@ func (a *Agent) Run(task string) <-chan models.AgentEvent {
 }
 
 // RunWithContext executes the given task using the agent within a provided context
+// This contains the elusive "loop" of the agent
 func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.AgentEvent {
 	out := make(chan models.AgentEvent)
 
@@ -105,9 +100,8 @@ func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.A
 			return
 		}
 
-		request := anthropicClient.GetRequest()
-
 		for {
+			request := anthropicClient.GetRequest()
 			reqJson, err := json.Marshal(request)
 			if err != nil {
 				out <- models.AgentEvent{Error: fmt.Errorf("failed to marshal request: %w", err)}
@@ -133,7 +127,7 @@ func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.A
 				return
 			}
 
-			nextRequest, done, err := anthropicClient.HandleResponse(response, out)
+			done, err := anthropicClient.HandleResponse(response, out)
 			if done {
 				break
 			}
@@ -141,12 +135,12 @@ func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.A
 				out <- models.AgentEvent{Error: fmt.Errorf("failed to handle response: %w", err)}
 				return
 			}
-			request = nextRequest
 		}
 	}()
 	return out
 }
 
+// postMessage posts `body` to the anthropic messages api
 func (a *Agent) postMessage(ctx context.Context, body string) ([]byte, error) {
 	bodyReader := bytes.NewReader([]byte(body))
 
@@ -173,6 +167,7 @@ func (a *Agent) postMessage(ctx context.Context, body string) ([]byte, error) {
 	return content, nil
 }
 
+// checkMessagesResponseErr checks if anthropic response returned an error according to their schema
 func (a *Agent) checkMessagesResponseErr(data []byte) error {
 	baseRes := &anthropic.MessagesBaseResponse{}
 	if err := json.Unmarshal(data, baseRes); err != nil {

@@ -73,11 +73,16 @@ func NewAnthropicClient(model anthropic.Model, prompt string, opts ...AnthropicR
 	}, nil
 }
 
+// GetRequest gets the current running `MessagesRequest` object
+// This request effectively serves as a running context of the agentic task
 func (a *AnthropicRequestMgr) GetRequest() *anthropic.MessagesRequest {
 	return a.requestContext
 }
 
-func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesResponse, out chan models.AgentEvent) (*anthropic.MessagesRequest, bool, error) {
+// HandleResponse accepts the anthropic api "/messages" response
+// This handles stop sequences and invocation of tool calls
+// Returns true if task is complete
+func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesResponse, out chan models.AgentEvent) (bool, error) {
 	complete := false
 
 	sysMsg := anthropic.Message{
@@ -114,7 +119,7 @@ func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesRespons
 
 			toolResultContent, err := a.handleToolUse(c, out)
 			if err != nil {
-				return nil, complete, err
+				return complete, err
 			}
 
 			usrMsg.Content = append(usrMsg.Content, toolResultContent)
@@ -122,7 +127,7 @@ func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesRespons
 		case anthropic.TEXT:
 			textContent, ok := c.(*anthropic.TextContent)
 			if !ok {
-				return nil, complete, fmt.Errorf("Response content did not properly parse")
+				return complete, fmt.Errorf("Response content did not properly parse")
 			}
 
 			out <- models.AgentEvent{Message: textContent.Text}
@@ -130,7 +135,7 @@ func (a *AnthropicRequestMgr) HandleResponse(response *anthropic.MessagesRespons
 	}
 	a.requestContext.Messages = append(a.requestContext.Messages, usrMsg)
 
-	return a.requestContext, complete, nil
+	return complete, nil
 }
 
 func (a *AnthropicRequestMgr) handleToolUse(content anthropic.Content, out chan models.AgentEvent) (anthropic.ToolResultContent, error) {

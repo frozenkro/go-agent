@@ -1,5 +1,5 @@
 // Package bash provides a persistent bash session to be invoked as a tool by llm agents
-// Current implementation is specific to anthropic spec:
+// Current implementation adheres to anthropic spec for "bash_20250124"
 // https://anthropic.mintlify.app/en/docs/agents-and-tools/tool-use/bash-tool
 
 package bash
@@ -51,6 +51,8 @@ func WithTimeout(timeout time.Duration) BashSessionOption {
 func NewBashSession(opts ...BashSessionOption) (*BashSession, error) {
 	cmd := exec.Command("bash", "--norc", "--noprofile", "-i")
 
+	// Use pty pkg for our tty emulator
+	// This provides a persistent bash session
 	f, err := pty.Start(cmd)
 	if err != nil {
 		return nil, err
@@ -79,6 +81,7 @@ func NewBashSession(opts ...BashSessionOption) (*BashSession, error) {
 	return bs, nil
 }
 
+// Execute a command with the provided timeout
 func (bs *BashSession) ExecuteWithTimeout(command string, timeout time.Duration) (string, error) {
 	bs.sendCommand(command)
 
@@ -104,10 +107,13 @@ func (bs *BashSession) ExecuteWithTimeout(command string, timeout time.Duration)
 	}
 }
 
+// Execute a command with the default timeout
 func (bs *BashSession) Execute(command string) (string, error) {
 	return bs.ExecuteWithTimeout(command, bs.defaultTimeout)
 }
 
+// Invoke the bash tool
+// `params` must be of type toolschema.BashToolInput
 func (t BashTool) Invoke(params any) (string, error) {
 	var p toolschema.BashToolInput
 	err := mapstructure.Decode(params, &p)
@@ -115,6 +121,7 @@ func (t BashTool) Invoke(params any) (string, error) {
 		return "", fmt.Errorf("Unable to parse invoke params for BashTool: '%v'", params)
 	}
 
+	// If llm prompted to restart bash session,
 	if t.bs != nil && p.Restart {
 		t.bs.Deinit()
 	}
@@ -128,11 +135,11 @@ func (t BashTool) Invoke(params any) (string, error) {
 		}
 	}
 
-	if p.Command != "" {
-		return t.bs.Execute(p.Command)
+	if p.Command == "" {
+		return "", fmt.Errorf("No command provided to execute")
 	}
 
-	return "", nil
+	return t.bs.Execute(p.Command)
 }
 
 func (bs *BashSession) getResponse(command string) (string, error) {
