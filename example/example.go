@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	// Create a minimal bash agent with default settings
+	// Create a minimal agent with the bash tool and default settings
 	agent, err := goagent.NewAgent(goagent.WithTools(anthropic.BASH))
 	if err != nil {
 		log.Fatal("Failed to create agent:", err)

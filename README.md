@@ -12,20 +12,25 @@ package main
 import (
     "log"
     "github.com/frozenkro/go-agent/goagent"
+	"github.com/frozenkro/go-agent/models/anthropic"
 )
 
 func main() {
-    // Create a new agent with default settings
-    agent, err := goagent.NewAgent()
+    // Create a minimal agent with the bash tool and default settings
+    agent, err := goagent.NewAgent(goagent.WithTools(anthropic.BASH))
     if err != nil {
         log.Fatal("Failed to create agent:", err)
     }
 
-    // Run a task
-    err = agent.Run("List all files in the current directory")
-    if err != nil {
-        log.Fatal("Failed to run task:", err)
-    }
+	// Run a simple task
+	ch := agent.Run("List all files in the current directory")
+	for event := range ch {
+		if event.Error != nil {
+			log.Fatalf("Error: %v", event.Error)
+		}
+
+		log.Println(event.Message)
+	}
 }
 ```
 
@@ -55,14 +60,15 @@ func main() {
         log.Fatal("Failed to create agent:", err)
     }
 
-    // Run a task with timeout
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-    defer cancel()
-    
-    err = agent.RunWithContext(ctx, "Create a simple Go function that calculates fibonacci numbers")
-    if err != nil {
-        log.Fatal("Failed to run task:", err)
-    }
+	// Run a more complex task
+	ch = customAgent.Run("Create a simple Go function that calculates fibonacci numbers and save it to fib/fib.go")
+	for event := range ch {
+		if event.Error != nil {
+			log.Fatalf("Error: %v", event.Error)
+		}
+
+		log.Println(event.Message)
+	}
 }
 ```
 

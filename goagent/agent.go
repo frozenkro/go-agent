@@ -79,12 +79,14 @@ func NewAgent(opts ...AgentOption) (*Agent, error) {
 }
 
 // Run executes the given task using the agent
+// Returns a channel which can be looped over to retrieve output in real time
 func (a *Agent) Run(task string) <-chan models.AgentEvent {
 	return a.RunWithContext(context.Background(), task)
 }
 
 // RunWithContext executes the given task using the agent within a provided context
 // This contains the elusive "loop" of the agent
+// Returns a channel which can be looped over to retrieve output in real time
 func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.AgentEvent {
 	out := make(chan models.AgentEvent)
 
