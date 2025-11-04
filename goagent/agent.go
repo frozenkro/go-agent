@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	apimgrs "github.com/frozenkro/go-agent/internal/api_mgrs"
+	"github.com/frozenkro/go-agent/internal/apimgrs"
 	"github.com/frozenkro/go-agent/models"
 	"github.com/frozenkro/go-agent/models/anthropic"
 	"github.com/joho/godotenv"
