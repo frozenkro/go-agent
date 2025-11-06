@@ -3,7 +3,7 @@ package ollama
 
 type OllamaRequest struct {
 	Model     string              `json:"model"`
-	Messages  Message             `json:"messages"`
+	Messages  []Message           `json:"messages"`
 	Tools     []Tool              `json:"tools"`
 	Format    OllamaRequestFormat `json:"format"` // this can also be a json schema, which is not elaborated on in the docs
 	Options   *Options            `json:"options,omitempty"`
@@ -15,16 +15,16 @@ type OllamaRequest struct {
 type Role string
 
 const (
-	SYSTEM_ROLE    Role = "system"
-	USER_ROLE      Role = "user"
-	ASSISTANT_ROLE Role = "assistant"
-	TOOL_ROLE      Role = "tool"
+	SYSTEM    Role = "system"
+	USER      Role = "user"
+	ASSISTANT Role = "assistant"
+	TOOL      Role = "tool"
 )
 
 type Message struct {
 	Role      Role   `json:"role"`
 	Content   string `json:"content"`
-	Thinking  bool   `json:"thinking"`
+	Thinking  string `json:"thinking"`
 	ToolCalls []any  `json:"tool_calls,omitempty"`
 }
 
