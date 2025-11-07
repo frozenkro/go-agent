@@ -1,6 +1,6 @@
 package tools
 
-import "github.com/frozenkro/go-agent/models/anthropic"
+import "github.com/frozenkro/goagent/models/anthropic"
 
 type ToolInvoker struct {
 	ToolMap *ToolMap

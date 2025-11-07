@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/frozenkro/go-agent/models/toolschema"
+	"github.com/frozenkro/goagent/models/toolschema"
 	"github.com/mitchellh/mapstructure"
 )
 

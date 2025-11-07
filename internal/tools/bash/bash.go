@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/creack/pty"
-	"github.com/frozenkro/go-agent/models/toolschema"
+	"github.com/frozenkro/goagent/models/toolschema"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 )

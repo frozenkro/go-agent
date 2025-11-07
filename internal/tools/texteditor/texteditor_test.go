@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	mock_texteditor "github.com/frozenkro/go-agent/internal/tools/texteditor/mocks"
+	mock_texteditor "github.com/frozenkro/goagent/internal/tools/texteditor/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -178,7 +178,7 @@ func TestHandleCreate(t *testing.T) {
 }
 
 func TestHandleCreate_Nested(t *testing.T) {
-	fileName := fmt.Sprintf("%v/nested/%v.txt", testResultsDir, "nested", t.Name())
+	fileName := fmt.Sprintf("%v/nested/%v.txt", testResultsDir, t.Name())
 	line1 := "Line 1"
 	line2 := "Line 2"
 	params := map[string]any{}

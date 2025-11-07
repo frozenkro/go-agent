@@ -3,9 +3,9 @@ package tools
 import (
 	"fmt"
 
-	"github.com/frozenkro/go-agent/internal/tools/bash"
-	"github.com/frozenkro/go-agent/internal/tools/texteditor"
-	"github.com/frozenkro/go-agent/models/anthropic"
+	"github.com/frozenkro/goagent/internal/tools/bash"
+	"github.com/frozenkro/goagent/internal/tools/texteditor"
+	"github.com/frozenkro/goagent/models/anthropic"
 )
 
 type ToolMeta struct {

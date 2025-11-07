@@ -1,4 +1,4 @@
-module github.com/frozenkro/go-agent
+module github.com/frozenkro/goagent
 
 go 1.24.6
 

@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/frozenkro/go-agent/internal/apimgrs"
-	"github.com/frozenkro/go-agent/models"
-	"github.com/frozenkro/go-agent/models/anthropic"
+	"github.com/frozenkro/goagent/internal/apimgrs"
+	"github.com/frozenkro/goagent/models"
+	"github.com/frozenkro/goagent/models/anthropic"
 	"github.com/joho/godotenv"
 )
 
