@@ -1,11 +1,11 @@
-# Makefile for go-agent library
+# Makefile for goagent library
 .PHONY: build test run example clean install lint fmt vet deps help build-example
 
 # Variables
 BINARY_NAME=example
 EXAMPLE_PATH=./example
 EXAMPLE_BINARY=$(EXAMPLE_PATH)/$(BINARY_NAME)
-MODULE_PATH=github.com/frozenkro/go-agent
+MODULE_PATH=github.com/frozenkro/goagent
 GOFLAGS=-v
 
 # Default target
@@ -14,8 +14,8 @@ help: ## Display this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # Library building and testing
-build: ## Build the go-agent library
-	@echo "Building go-agent library..."
+build: ## Build the goagent library
+	@echo "Building goagent library..."
 	go build $(GOFLAGS) ./...
 
 install: ## Install dependencies

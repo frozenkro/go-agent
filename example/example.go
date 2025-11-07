@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/frozenkro/go-agent/goagent"
-	"github.com/frozenkro/go-agent/models/anthropic"
+	"github.com/frozenkro/goagent/goagent"
+	"github.com/frozenkro/goagent/models/anthropic"
 )
 
 func main() {

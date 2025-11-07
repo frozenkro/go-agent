@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/frozenkro/go-agent/internal/tools"
-	"github.com/frozenkro/go-agent/models"
-	"github.com/frozenkro/go-agent/models/anthropic"
+	"github.com/frozenkro/goagent/internal/tools"
+	"github.com/frozenkro/goagent/models"
+	"github.com/frozenkro/goagent/models/anthropic"
 )
 
 type AnthropicRequestMgr struct {
