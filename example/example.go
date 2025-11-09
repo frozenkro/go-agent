@@ -4,13 +4,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/frozenkro/goagent/goagent"
-	"github.com/frozenkro/goagent/models/anthropic"
+	goagent "github.com/frozenkro/goagent/agent"
 )
 
 func main() {
 	// Create a minimal agent with the bash tool and default settings
-	agent, err := goagent.NewAgent(goagent.WithTools(anthropic.BASH))
+	agent, err := goagent.NewAgent(goagent.ANTHROPIC, goagent.WithTools(goagent.BASH_TOOL))
 	if err != nil {
 		log.Fatal("Failed to create agent:", err)
 	}
@@ -27,8 +26,9 @@ func main() {
 
 	// Create an agent with custom options
 	customAgent, err := goagent.NewAgent(
-		goagent.WithModel(anthropic.SONNET_4),
-		goagent.WithTools(anthropic.BASH, anthropic.TEXT_EDITOR),
+		goagent.ANTHROPIC,
+		goagent.WithModel(goagent.ANTH_SONNET_4),
+		goagent.WithTools(goagent.BASH_TOOL, goagent.TEXT_EDITOR_TOOL),
 		goagent.WithMaxTokens(2048),
 	)
 	if err != nil {

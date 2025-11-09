@@ -2,6 +2,8 @@ package anthropic
 
 import (
 	"encoding/json"
+
+	"github.com/frozenkro/goagent/internal/sessionmgr"
 )
 
 type MessagesBaseResponse struct {
@@ -91,3 +93,18 @@ const (
 	SR_PAUSE_TURN    StopReason = "pause_turn"
 	SR_REFUSAL       StopReason = "refusal"
 )
+
+func (r *MessagesResponse) IsComplete() bool {
+	return r.StopReason != SR_TOOL_USE
+}
+
+func (r *MessagesResponse) GetMessageGroup() []sessionmgr.Message {
+	// TODO
+	return nil
+}
+
+func (r *MessagesResponse) Init(data []byte) error {
+	// TODO
+
+	return nil
+}

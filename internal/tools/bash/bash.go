@@ -42,6 +42,14 @@ type tty interface {
 
 type BashSessionOption func(*BashSession)
 
+func (t BashTool) Spec() toolschema.ToolSpec {
+	return toolschema.ToolSpec{
+		Name:        toolschema.BASH,
+		Description: "Execute shell commands in a persistent bash session.",
+		Parameters:  toolschema.BashToolParams,
+	}
+}
+
 func WithTimeout(timeout time.Duration) BashSessionOption {
 	return func(bs *BashSession) {
 		bs.defaultTimeout = timeout

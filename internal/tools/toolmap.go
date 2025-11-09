@@ -5,30 +5,27 @@ import (
 
 	"github.com/frozenkro/goagent/internal/tools/bash"
 	"github.com/frozenkro/goagent/internal/tools/texteditor"
-	"github.com/frozenkro/goagent/models/anthropic"
+	"github.com/frozenkro/goagent/models/toolschema"
 )
 
 type ToolMeta struct {
-	Name anthropic.ToolName
-	Spec anthropic.AnthropicToolSpec
+	Name string
 	Tool Tool
 }
 
 type ToolMap struct {
-	Map map[anthropic.ToolName]ToolMeta
+	Map map[string]ToolMeta
 }
 
 func InitToolMap() *ToolMap {
-	toolNameMap := make(map[anthropic.ToolName]ToolMeta)
+	toolNameMap := make(map[string]ToolMeta)
 
-	toolNameMap[anthropic.BASH] = ToolMeta{
-		Name: anthropic.BASH,
-		Spec: anthropic.NewBashTool(),
+	toolNameMap[toolschema.BASH] = ToolMeta{
+		Name: toolschema.BASH,
 		Tool: bash.BashTool{},
 	}
-	toolNameMap[anthropic.TEXT_EDITOR] = ToolMeta{
-		Name: anthropic.TEXT_EDITOR,
-		Spec: anthropic.NewTextEditorTool(),
+	toolNameMap[toolschema.TEXT_EDITOR] = ToolMeta{
+		Name: toolschema.TEXT_EDITOR,
 		Tool: texteditor.NewTextEditorTool(),
 	}
 
@@ -37,7 +34,7 @@ func InitToolMap() *ToolMap {
 	}
 }
 
-func (t *ToolMap) ToolMetaByName(name anthropic.ToolName) (*ToolMeta, error) {
+func (t *ToolMap) ToolMetaByName(name string) (*ToolMeta, error) {
 	meta, ok := t.Map[name]
 	if !ok {
 		return nil, fmt.Errorf("No tool found with name %v", name)

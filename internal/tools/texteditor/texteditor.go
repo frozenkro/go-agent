@@ -28,6 +28,14 @@ func NewTextEditorTool() *TextEditorTool {
 
 type TextEditorWorkerImpl struct{}
 
+func (t TextEditorTool) Spec() toolschema.ToolSpec {
+	return toolschema.ToolSpec{
+		Name:        toolschema.TEXT_EDITOR,
+		Description: "View or modify text files",
+		Parameters:  toolschema.TextEditorToolParams,
+	}
+}
+
 func (t TextEditorTool) Invoke(params any) (string, error) {
 	var base toolschema.BaseTextEditorToolInput
 	err := mapstructure.Decode(params, &base)

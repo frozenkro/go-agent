@@ -1,5 +1,10 @@
 package anthropic
 
+import (
+	"github.com/frozenkro/goagent/internal/sessionmgr"
+	"github.com/frozenkro/goagent/internal/tools"
+)
+
 type Message struct {
 	Role    Role      `json:"role"`
 	Content []Content `json:"content"`
@@ -95,7 +100,7 @@ type CacheControl struct {
 }
 
 type MessagesRequest struct {
-	Model         Model               `json:"model"`
+	Model         string              `json:"model"`
 	Messages      []Message           `json:"messages"`
 	MaxTokens     int                 `json:"max_tokens"`
 	Container     string              `json:"container,omitempty"`
@@ -113,8 +118,43 @@ type MessagesRequest struct {
 	TopP          int                 `json:"top_p,omitempty"`
 }
 
-type Model string
-
 const (
-	SONNET_4 Model = "claude-sonnet-4-20250514"
+	SONNET_4 string = "claude-sonnet-4-20250514"
 )
+
+func (r *MessagesRequest) Init(model, prompt string) error {
+	r.Model = model
+	// TODO validate?
+
+	messages := make([]Message, 1)
+	messages[0] = Message{
+		Role: "user",
+		Content: []Content{
+			TextContent{
+				BaseContent: BaseContent{
+					Type: TEXT,
+				},
+				Text: prompt,
+			},
+		},
+	}
+
+	return nil
+}
+
+func (r *MessagesRequest) AddTool(meta *tools.ToolMeta) error {
+	// TODO
+	// hard convert bash and text editor tools to proper defined spec
+	// other tools should be registered as custom tools
+	return nil
+}
+
+func (r *MessagesRequest) SetMaxTokens(val int) error {
+	// TODO
+	return nil
+}
+
+func (r *MessagesRequest) AddMessageGroup([]sessionmgr.Message) error {
+	// TODO
+	return nil
+}

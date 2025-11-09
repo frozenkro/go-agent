@@ -1,7 +1,5 @@
 package tools
 
-import "github.com/frozenkro/goagent/models/anthropic"
-
 type ToolInvoker struct {
 	ToolMap *ToolMap
 }
@@ -13,21 +11,11 @@ func NewToolInvoker() ToolInvoker {
 	}
 }
 
-// Invoke will invoke any tool in the ToolMap, specified using toolUseContent.Name
-func (t *ToolInvoker) Invoke(toolUseContent anthropic.ToolUseContent) (anthropic.ToolResultContent, error) {
-	toolMeta, err := t.ToolMap.ToolMetaByName(anthropic.ToolName(toolUseContent.Name))
+// Invoke will invoke any tool in the ToolMap
+func (t *ToolInvoker) Invoke(toolName string, input any) (string, error) {
+	toolMeta, err := t.ToolMap.ToolMetaByName(toolName)
 	if err != nil {
-		return anthropic.ToolResultContent{}, err
+		return "", err
 	}
-	result, err := toolMeta.Tool.Invoke(toolUseContent.Input)
-	if err != nil {
-		return anthropic.ToolResultContent{}, err
-	}
-
-	toolResultContent := anthropic.ToolResultContent{
-		BaseContent: anthropic.BaseContent{Type: anthropic.TOOL_RESULT},
-		ToolUseId:   toolUseContent.Id,
-		Content:     result,
-	}
-	return toolResultContent, nil
+	return toolMeta.Tool.Invoke(input)
 }
