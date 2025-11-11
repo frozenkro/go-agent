@@ -1,8 +1,11 @@
 package anthropic
 
 import (
+	"fmt"
+
 	"github.com/frozenkro/goagent/internal/sessionmgr"
 	"github.com/frozenkro/goagent/internal/tools"
+	"github.com/frozenkro/goagent/models/toolschema"
 )
 
 type Message struct {
@@ -39,27 +42,25 @@ type ThinkingData struct {
 	Type         string `json:"type"`
 }
 
-type ToolName string
-
 const (
-	BASH        ToolName = "bash"
-	TEXT_EDITOR ToolName = "str_replace_based_edit_tool"
+	BASH        string = "bash"
+	TEXT_EDITOR string = "str_replace_based_edit_tool"
 )
 
 type AnthropicToolSpec interface {
 	GetType() string
-	GetName() ToolName
+	GetName() string
 }
 
 type BaseTool struct {
-	Name ToolName `json:"name"`
-	Type string   `json:"type"`
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 func (t BaseTool) GetType() string {
 	return t.Type
 }
-func (t BaseTool) GetName() ToolName {
+func (t BaseTool) GetName() string {
 	return t.Name
 }
 
@@ -84,6 +85,39 @@ func NewTextEditorTool() TextEditorTool {
 	return TextEditorTool{
 		BaseTool:      BaseTool{Type: "text_editor_20250728", Name: TEXT_EDITOR},
 		MaxCharacters: 10000,
+	}
+}
+
+type CustomTool struct {
+	BaseTool
+	Description  string        `json:"description"`
+	InputSchema  InputSchema   `json:"input_schema"`
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
+}
+
+type InputSchema struct {
+	Type       string             `json:"type"` // Always "object"
+	Required   []string           `json:"required"`
+	Properties *map[string]string `json:"properties,omitempty"`
+}
+
+func NewCustomTool(meta *tools.ToolMeta) CustomTool {
+	props := map[string]string{}
+	for k, v := range meta.Tool.Spec().Parameters.Properties {
+		props[k] = v.Type
+	}
+
+	return CustomTool{
+		BaseTool: BaseTool{
+			Type: "custom",
+			Name: meta.Name,
+		},
+		Description: meta.Tool.Spec().Description,
+		InputSchema: InputSchema{
+			Type:       "object",
+			Required:   meta.Tool.Spec().Parameters.Required,
+			Properties: &props,
+		},
 	}
 }
 
@@ -143,18 +177,71 @@ func (r *MessagesRequest) Init(model, prompt string) error {
 }
 
 func (r *MessagesRequest) AddTool(meta *tools.ToolMeta) error {
-	// TODO
-	// hard convert bash and text editor tools to proper defined spec
-	// other tools should be registered as custom tools
+	// Our bash and text editor tools adhere to anthropic-specific specs
+	// so we can ignore their defined schema and just tell anthropic they are
+	// their custom specs
+	if meta.Name == toolschema.BASH {
+		r.Tools = append(r.Tools, NewBashTool())
+	} else if meta.Name == toolschema.TEXT_EDITOR {
+		r.Tools = append(r.Tools, NewTextEditorTool())
+	} else {
+		r.Tools = append(r.Tools, NewCustomTool(meta))
+	}
 	return nil
 }
 
 func (r *MessagesRequest) SetMaxTokens(val int) error {
-	// TODO
+	r.MaxTokens = val
 	return nil
 }
 
-func (r *MessagesRequest) AddMessageGroup([]sessionmgr.Message) error {
-	// TODO
+func (r *MessagesRequest) AddMessageGroup(messages []sessionmgr.Message) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	var role Role
+	if messages[0].Role == sessionmgr.ASSISTANT {
+		role = ASSISTANT
+	} else {
+		role = USER
+	}
+
+	conts := []Content{}
+	for _, m := range messages {
+		switch m.Type {
+
+		case sessionmgr.TEXT:
+			conts = append(conts, TextContent{
+				BaseContent: BaseContent{Type: TEXT},
+				Text:        m.Text,
+			})
+		case sessionmgr.TOOL_CALL:
+			conts = append(conts, ToolUseContent{
+				BaseContent: BaseContent{Type: TOOL_USE},
+				Id:          m.ToolCallId,
+				Name:        m.ToolCall.Name,
+				Input:       m.ToolCall.Params,
+			})
+		case sessionmgr.TOOL_RESPONSE:
+			conts = append(conts, ToolResultContent{
+				BaseContent: BaseContent{Type: TOOL_RESULT},
+				ToolUseId:   m.ToolCallId,
+				Content:     m.Text,
+			})
+		case sessionmgr.THINKING:
+			conts = append(conts, ThinkingContent{
+				BaseContent: BaseContent{Type: THINKING},
+				Thinking:    m.Text,
+			})
+		default:
+			return fmt.Errorf("Unsupported content type '%v'\nContent: %v", m.Type, m.Text)
+		}
+	}
+
+	r.Messages = append(r.Messages, Message{
+		Role:    role,
+		Content: conts,
+	})
+
 	return nil
 }

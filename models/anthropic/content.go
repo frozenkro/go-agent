@@ -54,9 +54,9 @@ type RedactedThinkingContent struct {
 
 type ToolUseContent struct {
 	BaseContent
-	Id    string   `json:"id"`
-	Name  ToolName `json:"name"`
-	Input any      `json:"input"`
+	Id    string         `json:"id"`
+	Name  string         `json:"name"`
+	Input map[string]any `json:"input"`
 }
 
 type ToolResultContent struct {
