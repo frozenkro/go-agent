@@ -2,6 +2,7 @@ package anthropic
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/frozenkro/goagent/internal/sessionmgr"
 )
@@ -98,9 +99,57 @@ func (r *MessagesResponse) IsComplete() bool {
 	return r.StopReason != SR_TOOL_USE
 }
 
-func (r *MessagesResponse) GetMessageGroup() []sessionmgr.Message {
-	// TODO
-	return nil
+func (r *MessagesResponse) GetStatementGroup() ([]sessionmgr.Statement, error) {
+	msgs := []sessionmgr.Statement{}
+
+	for _, v := range r.Content {
+		switch v.GetType() {
+		case TEXT:
+			c, ok := v.(*TextContent)
+			if !ok {
+				fmt.Errorf("Failed to parse to TextContent")
+			}
+
+			msgs = append(msgs, sessionmgr.Statement{
+				Role: sessionmgr.ASSISTANT,
+				Type: sessionmgr.TEXT,
+				Text: c.Text,
+			})
+
+		case TOOL_USE:
+			c, ok := v.(*ToolUseContent)
+			if !ok {
+				fmt.Errorf("Failed to parse to ToolUseContent")
+			}
+
+			msgs = append(msgs, sessionmgr.Statement{
+				Role:       sessionmgr.ASSISTANT,
+				Type:       sessionmgr.TOOL_CALL,
+				ToolCallId: c.Id,
+				ToolCall: sessionmgr.ToolCall{
+					Name:   c.Name,
+					Params: c.Input,
+				},
+			})
+
+		case THINKING:
+			c, ok := v.(*ThinkingContent)
+			if !ok {
+				return nil, fmt.Errorf("Failed to parse to ThinkingContent")
+			}
+
+			msgs = append(msgs, sessionmgr.Statement{
+				Role: sessionmgr.ASSISTANT,
+				Type: sessionmgr.THINKING,
+				Text: c.Thinking,
+			})
+
+		default:
+			return nil, fmt.Errorf("Unsupported content type '%v'", r.GetType())
+		}
+	}
+
+	return msgs, nil
 }
 
 func (r *MessagesResponse) Init(data []byte) error {

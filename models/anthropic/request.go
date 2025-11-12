@@ -195,7 +195,7 @@ func (r *MessagesRequest) SetMaxTokens(val int) error {
 	return nil
 }
 
-func (r *MessagesRequest) AddMessageGroup(messages []sessionmgr.Message) error {
+func (r *MessagesRequest) AddStatementGroup(messages []sessionmgr.Statement) error {
 	if len(messages) == 0 {
 		return nil
 	}

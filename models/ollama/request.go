@@ -2,6 +2,8 @@
 package ollama
 
 import (
+	"fmt"
+
 	"github.com/frozenkro/goagent/internal/sessionmgr"
 	"github.com/frozenkro/goagent/internal/tools"
 )
@@ -26,11 +28,34 @@ const (
 	TOOL      Role = "tool"
 )
 
+func (r Role) ToDomainRole() (sessionmgr.Role, error) {
+	switch r {
+	case SYSTEM:
+		return sessionmgr.SYSTEM, nil
+	case USER:
+		return sessionmgr.USER, nil
+	case TOOL:
+		return sessionmgr.TOOL, nil
+	case ASSISTANT:
+		return sessionmgr.ASSISTANT, nil
+	default:
+		return 0, fmt.Errorf("Unsupported role '%v'", r)
+	}
+}
+
 type Message struct {
-	Role      Role   `json:"role"`
-	Content   string `json:"content"`
-	Thinking  string `json:"thinking,omitempty"`
-	ToolCalls []any  `json:"tool_calls,omitempty"`
+	Role      Role             `json:"role"`
+	Content   string           `json:"content"`
+	Thinking  string           `json:"thinking,omitempty"`
+	ToolCalls []OllamaToolCall `json:"tool_calls,omitempty"`
+}
+
+type OllamaToolCall struct {
+	Function struct {
+		Name        string         `json:"name"`
+		Description string         `json:"description"`
+		Arguments   map[string]any `json:"arguments"`
+	} `json:"function"`
 }
 
 type ToolSpec struct {
@@ -96,7 +121,7 @@ func (r *OllamaRequest) SetMaxTokens(val int) error {
 	return nil
 }
 
-func (r *OllamaRequest) AddMessageGroup([]sessionmgr.Message) error {
+func (r *OllamaRequest) AddStatementGroup([]sessionmgr.Statement) error {
 	// TODO
 	return nil
 }

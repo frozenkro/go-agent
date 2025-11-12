@@ -6,5 +6,5 @@ type RequestHandler interface {
 	Init(model, prompt string) error
 	AddTool(*tools.ToolMeta) error
 	SetMaxTokens(int) error
-	AddMessageGroup([]Message) error
+	AddStatementGroup([]Statement) error
 }

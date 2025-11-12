@@ -69,16 +69,19 @@ func NewSessionMgr(req RequestHandler, model, prompt string, opts ...SessionMgrO
 func (s *SessionMgr) HandleResponse(response ResponseHandler, out chan models.AgentEvent) (bool, error) {
 	complete := response.IsComplete()
 
-	messages := response.GetMessageGroup()
-	if err := s.req.AddMessageGroup(messages); err != nil {
-		return complete, fmt.Errorf("Failed to append llm response messages to request context: %w", err)
+	statements, err := response.GetStatementGroup()
+	if err != nil {
+		return complete, fmt.Errorf("Failed to retrieve statements from response: %w", err)
+	}
+	if err := s.req.AddStatementGroup(statements); err != nil {
+		return complete, fmt.Errorf("Failed to append llm response statements to request context: %w", err)
 	}
 
-	newMessages := []Message{}
+	newStatements := []Statement{}
 	errs := []error{}
 
 	// Iterate over all response content to build subsequent request content and task context
-	for _, m := range messages {
+	for _, m := range statements {
 		switch m.Type {
 		case TOOL_CALL:
 			out <- models.AgentEvent{Message: fmt.Sprintf("[Tool Call]: %v", m.ToolCall.Name)}
@@ -90,7 +93,7 @@ func (s *SessionMgr) HandleResponse(response ResponseHandler, out chan models.Ag
 			}
 
 			out <- models.AgentEvent{Message: fmt.Sprintf("[Tool Call Result]: %v", toolResult)}
-			newMessages = append(newMessages, Message{
+			newStatements = append(newStatements, Statement{
 				Role:       TOOL,
 				Type:       TOOL_RESPONSE,
 				Text:       toolResult,
@@ -106,7 +109,7 @@ func (s *SessionMgr) HandleResponse(response ResponseHandler, out chan models.Ag
 		}
 	}
 
-	if err := s.req.AddMessageGroup(newMessages); err != nil {
+	if err := s.req.AddStatementGroup(newStatements); err != nil {
 		return complete, fmt.Errorf("Failed to append client request messages to request context: %w", err)
 	}
 

@@ -1,6 +1,6 @@
 package sessionmgr
 
-type Message struct {
+type Statement struct {
 	Role       Role
 	Type       Type
 	Text       string
