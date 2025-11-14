@@ -94,10 +94,10 @@ func (s *SessionMgr) HandleResponse(response ResponseHandler, out chan models.Ag
 
 			out <- models.AgentEvent{Message: fmt.Sprintf("[Tool Call Result]: %v", toolResult)}
 			newStatements = append(newStatements, Statement{
-				Role:       TOOL,
-				Type:       TOOL_RESPONSE,
-				Text:       toolResult,
-				ToolCallId: m.ToolCallId,
+				Role:     TOOL,
+				Type:     TOOL_RESPONSE,
+				Text:     toolResult,
+				ToolCall: ToolCall{Name: m.ToolCall.Name, Id: m.ToolCall.Id},
 			})
 
 		case TEXT:

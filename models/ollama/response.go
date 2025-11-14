@@ -36,12 +36,12 @@ func (r *OllamaResponse) GetStatementGroup() ([]sessionmgr.Statement, error) {
 
 	for i, v := range r.Message.ToolCalls {
 		sts = append(sts, sessionmgr.Statement{
-			Role:       sessionmgr.ASSISTANT,
-			Type:       sessionmgr.TOOL_CALL,
-			ToolCallId: strconv.Itoa(i),
+			Role: sessionmgr.ASSISTANT,
+			Type: sessionmgr.TOOL_CALL,
 			ToolCall: sessionmgr.ToolCall{
 				Name:   v.Function.Name,
 				Params: v.Function.Arguments,
+				Id:     strconv.Itoa(i),
 			},
 		})
 	}

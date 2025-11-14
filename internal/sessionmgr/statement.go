@@ -1,11 +1,10 @@
 package sessionmgr
 
 type Statement struct {
-	Role       Role
-	Type       Type
-	Text       string
-	ToolCall   ToolCall
-	ToolCallId string
+	Role     Role
+	Type     Type
+	Text     string
+	ToolCall ToolCall
 }
 
 type Role int
@@ -29,4 +28,5 @@ const (
 type ToolCall struct {
 	Name   string
 	Params map[string]any
+	Id     string
 }

@@ -218,14 +218,14 @@ func (r *MessagesRequest) AddStatementGroup(messages []sessionmgr.Statement) err
 		case sessionmgr.TOOL_CALL:
 			conts = append(conts, ToolUseContent{
 				BaseContent: BaseContent{Type: TOOL_USE},
-				Id:          m.ToolCallId,
+				Id:          m.ToolCall.Id,
 				Name:        m.ToolCall.Name,
 				Input:       m.ToolCall.Params,
 			})
 		case sessionmgr.TOOL_RESPONSE:
 			conts = append(conts, ToolResultContent{
 				BaseContent: BaseContent{Type: TOOL_RESULT},
-				ToolUseId:   m.ToolCallId,
+				ToolUseId:   m.ToolCall.Id,
 				Content:     m.Text,
 			})
 		case sessionmgr.THINKING:

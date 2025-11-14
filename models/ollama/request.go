@@ -3,6 +3,7 @@ package ollama
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/frozenkro/goagent/internal/sessionmgr"
 	"github.com/frozenkro/goagent/internal/tools"
@@ -47,15 +48,17 @@ type Message struct {
 	Role      Role             `json:"role"`
 	Content   string           `json:"content"`
 	Thinking  string           `json:"thinking,omitempty"`
+	ToolName  string           `json:"tool_name,omitempty"`
 	ToolCalls []OllamaToolCall `json:"tool_calls,omitempty"`
 }
 
 type OllamaToolCall struct {
-	Function struct {
-		Name        string         `json:"name"`
-		Description string         `json:"description"`
-		Arguments   map[string]any `json:"arguments"`
-	} `json:"function"`
+	Function ToolCallFunction `json:"function"`
+}
+type ToolCallFunction struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Arguments   map[string]any `json:"arguments"`
 }
 
 type ToolSpec struct {
@@ -68,9 +71,9 @@ type ToolType string
 const Function ToolType = "function"
 
 type ToolFunction struct {
-	Name        string `json:"name"`
-	Parameters  any    `json:"parameters"`
-	Description string `json:"description"`
+	Name        string     `json:"name"`
+	Parameters  ToolParams `json:"parameters"`
+	Description string     `json:"description"`
 }
 
 type ToolParams struct {
@@ -112,16 +115,103 @@ func (r *OllamaRequest) Init(model, prompt string) error {
 }
 
 func (r *OllamaRequest) AddTool(meta *tools.ToolMeta) error {
-	// TODO
+	spec := meta.Tool.Spec()
+	props := map[string]ToolProperty{}
+	for key, p := range spec.Parameters.Properties {
+		props[key] = ToolProperty{
+			Type:        p.Type,
+			Description: p.Description,
+		}
+	}
+
+	r.Tools = append(r.Tools, ToolSpec{
+		Type: "function",
+		Function: ToolFunction{
+			Name:        meta.Name,
+			Description: spec.Description,
+			Parameters: ToolParams{
+				Type:       "object",
+				Required:   spec.Parameters.Required,
+				Properties: props,
+			},
+		},
+	})
 	return nil
 }
 
 func (r *OllamaRequest) SetMaxTokens(val int) error {
-	// TODO
+	r.Options.NumPredict = val
 	return nil
 }
 
-func (r *OllamaRequest) AddStatementGroup([]sessionmgr.Statement) error {
-	// TODO
+func (r *OllamaRequest) AddStatementGroup(sts []sessionmgr.Statement) error {
+	if len(sts) == 0 {
+		return nil
+	}
+
+	switch sts[0].Role {
+	case sessionmgr.ASSISTANT:
+		r.Messages = append(r.Messages, toAssistantMessage(sts))
+	case sessionmgr.TOOL:
+		res, err := toToolCallResults(sts)
+		if err != nil {
+			return err
+		}
+		r.Messages = append(r.Messages, res...)
+	case sessionmgr.USER:
+		r.Messages = append(r.Messages, toTextMessages(sts, USER)...)
+	case sessionmgr.SYSTEM:
+		r.Messages = append(r.Messages, toTextMessages(sts, SYSTEM)...)
+	}
 	return nil
+}
+
+func toAssistantMessage(sts []sessionmgr.Statement) Message {
+	msg := Message{}
+
+	for _, v := range sts {
+		switch v.Type {
+		case sessionmgr.TOOL_CALL:
+			msg.ToolCalls = append(msg.ToolCalls, OllamaToolCall{
+				Function: ToolCallFunction{
+					Name:      v.ToolCall.Name,
+					Arguments: v.ToolCall.Params,
+				},
+			})
+		}
+	}
+
+	return msg
+}
+
+func toToolCallResults(sts []sessionmgr.Statement) ([]Message, error) {
+	msgs := make([]Message, len(sts))
+
+	for _, v := range sts {
+		index, err := strconv.Atoi(v.ToolCall.Id)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to cast tool call index '%v' to int", v.ToolCall.Id)
+		}
+
+		msgs[index] = Message{
+			Role:     TOOL,
+			ToolName: v.ToolCall.Name,
+			Content:  v.Text,
+		}
+	}
+
+	return msgs, nil
+}
+
+func toTextMessages(sts []sessionmgr.Statement, role Role) []Message {
+	msgs := []Message{}
+
+	for _, v := range sts {
+		msgs = append(msgs, Message{
+			Role:    role,
+			Content: v.Text,
+		})
+	}
+
+	return msgs
 }

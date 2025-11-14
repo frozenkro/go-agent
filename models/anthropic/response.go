@@ -123,12 +123,12 @@ func (r *MessagesResponse) GetStatementGroup() ([]sessionmgr.Statement, error) {
 			}
 
 			msgs = append(msgs, sessionmgr.Statement{
-				Role:       sessionmgr.ASSISTANT,
-				Type:       sessionmgr.TOOL_CALL,
-				ToolCallId: c.Id,
+				Role: sessionmgr.ASSISTANT,
+				Type: sessionmgr.TOOL_CALL,
 				ToolCall: sessionmgr.ToolCall{
 					Name:   c.Name,
 					Params: c.Input,
+					Id:     c.Id,
 				},
 			})
 
@@ -152,8 +152,20 @@ func (r *MessagesResponse) GetStatementGroup() ([]sessionmgr.Statement, error) {
 	return msgs, nil
 }
 
+// Init unmarshals data and checks if anthropic response returned an error according to their schema
 func (r *MessagesResponse) Init(data []byte) error {
-	// TODO
+	baseRes := &MessagesBaseResponse{}
+	if err := json.Unmarshal(data, baseRes); err != nil {
+		return fmt.Errorf("failed to unmarshal base response: %w", err)
+	}
 
+	if baseRes.Type == "error" {
+		errRes := &MessagesErrorResponse{}
+		if err := json.Unmarshal(data, errRes); err != nil {
+			return fmt.Errorf("failed to unmarshal error response: %w", err)
+		}
+
+		return fmt.Errorf("Anthropic API error - type: %s, message: %s", errRes.Error.Type, errRes.Error.Message)
+	}
 	return nil
 }
