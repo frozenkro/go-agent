@@ -34,11 +34,11 @@ func InitToolMap(provider globals.Provider) {
 		textEditorToolName = toolschema.TEXT_EDITOR
 	}
 
-	toolNameMap[bashToolName] = ToolMeta{
+	toolNameMap[toolschema.BASH] = ToolMeta{
 		Name: bashToolName,
 		Tool: bash.BashTool{},
 	}
-	toolNameMap[textEditorToolName] = ToolMeta{
+	toolNameMap[toolschema.TEXT_EDITOR] = ToolMeta{
 		Name: textEditorToolName,
 		Tool: texteditor.NewTextEditorTool(),
 	}
