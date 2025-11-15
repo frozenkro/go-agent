@@ -160,8 +160,7 @@ func (r *MessagesRequest) Init(model, prompt string) error {
 	r.Model = model
 	// TODO validate?
 
-	messages := make([]Message, 1)
-	messages[0] = Message{
+	r.Messages = append(r.Messages, Message{
 		Role: "user",
 		Content: []Content{
 			TextContent{
@@ -171,7 +170,7 @@ func (r *MessagesRequest) Init(model, prompt string) error {
 				Text: prompt,
 			},
 		},
-	}
+	})
 
 	return nil
 }

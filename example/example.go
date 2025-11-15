@@ -5,9 +5,12 @@ import (
 	"os"
 
 	goagent "github.com/frozenkro/goagent/agent"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load(".env")
+
 	// Create a minimal agent with the bash tool and default settings
 	agent, err := goagent.NewAgent(goagent.ANTHROPIC, goagent.WithTools(goagent.BASH_TOOL))
 	if err != nil {

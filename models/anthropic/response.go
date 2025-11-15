@@ -167,5 +167,9 @@ func (r *MessagesResponse) Init(data []byte) error {
 
 		return fmt.Errorf("Anthropic API error - type: %s, message: %s", errRes.Error.Type, errRes.Error.Message)
 	}
+
+	if err := json.Unmarshal(data, r); err != nil {
+		return fmt.Errorf("failed to unmarshal success response: %w", err)
+	}
 	return nil
 }
