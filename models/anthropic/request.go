@@ -3,6 +3,7 @@ package anthropic
 import (
 	"fmt"
 
+	"github.com/frozenkro/goagent/internal/globals"
 	"github.com/frozenkro/goagent/internal/sessionmgr"
 	"github.com/frozenkro/goagent/internal/tools"
 	"github.com/frozenkro/goagent/models/toolschema"
@@ -42,11 +43,6 @@ type ThinkingData struct {
 	Type         string `json:"type"`
 }
 
-const (
-	BASH        string = "bash"
-	TEXT_EDITOR string = "str_replace_based_edit_tool"
-)
-
 type AnthropicToolSpec interface {
 	GetType() string
 	GetName() string
@@ -71,7 +67,7 @@ type BashTool struct {
 
 func NewBashTool() BashTool {
 	return BashTool{
-		BaseTool: BaseTool{Type: "bash_20250124", Name: BASH},
+		BaseTool: BaseTool{Type: "bash_20250124", Name: globals.ANTH_BASH},
 	}
 }
 
@@ -83,7 +79,7 @@ type TextEditorTool struct {
 
 func NewTextEditorTool() TextEditorTool {
 	return TextEditorTool{
-		BaseTool:      BaseTool{Type: "text_editor_20250728", Name: TEXT_EDITOR},
+		BaseTool:      BaseTool{Type: "text_editor_20250728", Name: globals.ANTH_TEXT_EDITOR},
 		MaxCharacters: 10000,
 	}
 }

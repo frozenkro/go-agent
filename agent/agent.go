@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/frozenkro/goagent/internal/globals"
 	"github.com/frozenkro/goagent/internal/sessionmgr"
+	"github.com/frozenkro/goagent/internal/tools"
 	"github.com/frozenkro/goagent/models"
 	"github.com/frozenkro/goagent/models/anthropic"
 	"github.com/frozenkro/goagent/models/ollama"
@@ -21,7 +23,7 @@ const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 // Agent represents a Go agent that can execute tasks using AI
 type Agent struct {
 	model        string
-	provider     Provider
+	provider     globals.Provider
 	tools        []string
 	apiKey       string
 	maxTokens    int
@@ -67,8 +69,10 @@ func WithProviderUrl(url string) AgentOption {
 }
 
 // NewAgent creates a new Agent
-func NewAgent(provider Provider, opts ...AgentOption) (*Agent, error) {
+func NewAgent(provider globals.Provider, opts ...AgentOption) (*Agent, error) {
 	godotenv.Load()
+
+	tools.InitToolMap(provider)
 
 	agent := &Agent{
 		provider:  provider,
@@ -159,12 +163,12 @@ func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.A
 			}
 
 			done, err := mgr.HandleResponse(response, out)
-			if done {
-				break
-			}
 			if err != nil {
 				out <- models.AgentEvent{Error: fmt.Errorf("failed to handle response: %w", err)}
 				return
+			}
+			if done {
+				break
 			}
 		}
 	}()

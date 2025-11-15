@@ -19,11 +19,8 @@ type SessionMgrOption func(*SessionMgr) error
 func WithTools(toolNames ...string) SessionMgrOption {
 
 	return func(s *SessionMgr) error {
-
-		toolMap := tools.InitToolMap()
-
 		for _, toolName := range toolNames {
-			toolMeta, err := toolMap.ToolMetaByName(toolName)
+			toolMeta, err := tools.ToolMapInst.ToolMetaByName(toolName)
 
 			if err == nil {
 				if err = s.req.AddTool(toolMeta); err != nil {
@@ -46,9 +43,10 @@ func WithMaxTokens(maxTokens int) SessionMgrOption {
 }
 
 func NewSessionMgr(req RequestHandler, model, prompt string, opts ...SessionMgrOption) (SessionMgr, error) {
+
 	s := SessionMgr{
 		req:         req,
-		toolInvoker: tools.NewToolInvoker(),
+		toolInvoker: tools.ToolInvoker{},
 	}
 
 	s.req.Init(model, prompt)

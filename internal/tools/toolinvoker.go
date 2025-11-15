@@ -1,19 +1,10 @@
 package tools
 
-type ToolInvoker struct {
-	ToolMap *ToolMap
-}
-
-func NewToolInvoker() ToolInvoker {
-	toolMap := InitToolMap()
-	return ToolInvoker{
-		ToolMap: toolMap,
-	}
-}
+type ToolInvoker struct{}
 
 // Invoke will invoke any tool in the ToolMap
 func (t *ToolInvoker) Invoke(toolName string, input any) (string, error) {
-	toolMeta, err := t.ToolMap.ToolMetaByName(toolName)
+	toolMeta, err := ToolMapInst.ToolMetaByName(toolName)
 	if err != nil {
 		return "", err
 	}

@@ -3,6 +3,7 @@ package tools
 import (
 	"fmt"
 
+	"github.com/frozenkro/goagent/internal/globals"
 	"github.com/frozenkro/goagent/internal/tools/bash"
 	"github.com/frozenkro/goagent/internal/tools/texteditor"
 	"github.com/frozenkro/goagent/models/toolschema"
@@ -17,19 +18,32 @@ type ToolMap struct {
 	Map map[string]ToolMeta
 }
 
-func InitToolMap() *ToolMap {
+var ToolMapInst ToolMap
+
+func InitToolMap(provider globals.Provider) {
 	toolNameMap := make(map[string]ToolMeta)
 
-	toolNameMap[toolschema.BASH] = ToolMeta{
-		Name: toolschema.BASH,
+	var bashToolName string
+	var textEditorToolName string
+
+	if provider == globals.ANTHROPIC {
+		bashToolName = globals.ANTH_BASH
+		textEditorToolName = globals.ANTH_TEXT_EDITOR
+	} else {
+		bashToolName = toolschema.BASH
+		textEditorToolName = toolschema.TEXT_EDITOR
+	}
+
+	toolNameMap[bashToolName] = ToolMeta{
+		Name: bashToolName,
 		Tool: bash.BashTool{},
 	}
-	toolNameMap[toolschema.TEXT_EDITOR] = ToolMeta{
-		Name: toolschema.TEXT_EDITOR,
+	toolNameMap[textEditorToolName] = ToolMeta{
+		Name: textEditorToolName,
 		Tool: texteditor.NewTextEditorTool(),
 	}
 
-	return &ToolMap{
+	ToolMapInst = ToolMap{
 		Map: toolNameMap,
 	}
 }
