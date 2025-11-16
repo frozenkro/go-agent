@@ -18,8 +18,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
-
 // Agent represents a Go agent that can execute tasks using AI
 type Agent struct {
 	model        string
@@ -62,6 +60,8 @@ func WithMaxTokens(maxTokens int) AgentOption {
 	}
 }
 
+// WithProviderUrl sets a custom url for the llm provider's chat endpoint.
+// Useful for ollama specifically.
 func WithProviderUrl(url string) AgentOption {
 	return func(a *Agent) {
 		a.url = url
@@ -74,15 +74,30 @@ func NewAgent(provider globals.Provider, opts ...AgentOption) (*Agent, error) {
 
 	tools.InitToolMap(provider)
 
+	var defaultModel string
+	if provider == ANTHROPIC {
+		defaultModel = anthropic.SONNET_4
+	}
+	// TODO eventually create provider metadata maps containing default url/model/etc
+
 	agent := &Agent{
 		provider:  provider,
-		model:     anthropic.SONNET_4,
+		model:     defaultModel,
 		apiKey:    os.Getenv("GA_API_KEY"),
 		maxTokens: 1024,
 	}
 
 	for _, opt := range opts {
 		opt(agent)
+	}
+
+	if agent.url == "" {
+		switch provider {
+		case ANTHROPIC:
+			agent.url = globals.ANTHROPIC_MESSAGES_URL
+		case OLLAMA:
+			agent.url = globals.OLLAMA_DEFAULT_URL
+		}
 	}
 
 	return agent.validate()
@@ -93,8 +108,8 @@ func (a *Agent) validate() (*Agent, error) {
 		return nil, fmt.Errorf("No anthropic api key provided. Either pass WithAPIKey AgentOption or set 'GA_API_KEY' environment variable")
 	}
 
-	if a.provider == OLLAMA && a.url == "" {
-		return nil, fmt.Errorf("No ollama url provided. Use WithProviderUrl AgentOption.")
+	if a.provider == OLLAMA && a.model == "" {
+		return nil, fmt.Errorf("No model provided, Ollama provider has no default model. Use WithModel AgentOption to set.")
 	}
 
 	return a, nil
@@ -179,7 +194,7 @@ func (a *Agent) RunWithContext(ctx context.Context, task string) <-chan models.A
 func (a *Agent) postMessage(ctx context.Context, body string) ([]byte, error) {
 	bodyReader := bytes.NewReader([]byte(body))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ANTHROPIC_MESSAGES_URL, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.url, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -199,25 +214,11 @@ func (a *Agent) postMessage(ctx context.Context, body string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Server returned unexpected status code '%v' with content '%v'", res.StatusCode, string(content))
+	}
+
 	return content, nil
-}
-
-// checkMessagesResponseErr checks if anthropic response returned an error according to their schema
-func (a *Agent) checkMessagesResponseErr(data []byte) error {
-	baseRes := &anthropic.MessagesBaseResponse{}
-	if err := json.Unmarshal(data, baseRes); err != nil {
-		return fmt.Errorf("failed to unmarshal base response: %w", err)
-	}
-
-	if baseRes.Type == "error" {
-		errRes := &anthropic.MessagesErrorResponse{}
-		if err := json.Unmarshal(data, errRes); err != nil {
-			return fmt.Errorf("failed to unmarshal error response: %w", err)
-		}
-
-		return fmt.Errorf("Anthropic API error - type: %s, message: %s", errRes.Error.Type, errRes.Error.Message)
-	}
-	return nil
 }
 
 func (a *Agent) newRequestHandler() (sessionmgr.RequestHandler, error) {

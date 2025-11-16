@@ -7,8 +7,7 @@ const (
 	OLLAMA
 )
 
-// Anthropic-specific tool names
 const (
-	ANTH_BASH        string = "bash"
-	ANTH_TEXT_EDITOR string = "str_replace_based_edit_tool"
+	ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
+	OLLAMA_DEFAULT_URL     = "http://localhost:11434/api/chat"
 )

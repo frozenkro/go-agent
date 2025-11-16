@@ -86,6 +86,7 @@ func (s *SessionMgr) HandleResponse(response ResponseHandler, out chan models.Ag
 
 			toolResult, err := s.toolInvoker.Invoke(m.ToolCall.Name, m.ToolCall.Params)
 			if err != nil {
+				// tool call errors returned to llm provider rather than halting execution
 				errs = append(errs, err)
 				continue
 			}

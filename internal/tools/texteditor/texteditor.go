@@ -71,7 +71,9 @@ func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
-	// Handle directory view
+	input.Path = sanitizeRelativePath(input.Path)
+
+	// Handle directory view - basically just the results of `ls`
 	fileInfo, err := os.Stat(input.Path)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get stats for path '%v': %w", input.Path, err)
@@ -86,7 +88,7 @@ func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 		for _, v := range entries {
 			var entry string
 			if v.IsDir() {
-				// Indicate to the requesting agent that the entry is a dir
+				// Indicate to the requesting agent that this entry is a dir
 				entry = fmt.Sprintf("%v%c", v.Name(), '/')
 			} else {
 				entry = v.Name()
@@ -149,9 +151,7 @@ func (w TextEditorWorkerImpl) HandleStrReplace(params any) (string, error) {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
-	// if strings.ContainsRune(input.OldStr, '\n') {
-	// 	return "", fmt.Errorf("Multi-line string replace not supported")
-	// }
+	input.Path = sanitizeRelativePath(input.Path)
 
 	fileContent, err := getFileContent(input.Path)
 	if err != nil {
@@ -180,9 +180,7 @@ func (w TextEditorWorkerImpl) HandleCreate(params any) (string, error) {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
-	// Ensure "myFile", "./myFile", and "/myFile" all result in a write to "./myFile"
-	cleanInputPath := strings.TrimPrefix(input.Path, "/")
-	input.Path = fmt.Sprintf("./%v", cleanInputPath)
+	input.Path = sanitizeRelativePath(input.Path)
 
 	path := filepath.Dir(input.Path)
 	if err = os.MkdirAll(path, 0755); err != nil {
@@ -208,6 +206,8 @@ func (w TextEditorWorkerImpl) HandleInsert(params any) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
+
+	input.Path = sanitizeRelativePath(input.Path)
 
 	file, err := os.Open(input.Path)
 	if err != nil {
@@ -316,4 +316,11 @@ func getFileContent(path string) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+// sanitizeRelativePath ensures "myFile", "./myFile", and "/myFile" all result in a write to "./myFile"
+// This is because agents should never operate outside of cwd
+func sanitizeRelativePath(path string) string {
+	cleanInputPath := strings.TrimPrefix(path, "/")
+	return fmt.Sprintf("./%v", cleanInputPath)
 }

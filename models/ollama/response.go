@@ -12,13 +12,13 @@ type OllamaResponse struct {
 	CreatedAt          string  `json:"created_at"`
 	Message            Message `json:"message"`
 	Done               bool    `json:"done"`
-	DoneReason         bool    `json:"done_reason"`
-	TotalDuration      int     `json:"total_duration"`
-	LoadDuration       int     `json:"load_duration"`
-	PromptEvalCount    int     `json:"prompt_eval_count"`
-	PromptEvalDuration int     `json:"prompt_eval_duration"`
-	EvalCount          int     `json:"eval_count"`
-	EvalDuration       int     `json:"eval_duration"`
+	DoneReason         string  `json:"done_reason,omitempty"`
+	TotalDuration      int     `json:"total_duration,omitempty"`
+	LoadDuration       int     `json:"load_duration,omitempty"`
+	PromptEvalCount    int     `json:"prompt_eval_count,omitempty"`
+	PromptEvalDuration int     `json:"prompt_eval_duration,omitempty"`
+	EvalCount          int     `json:"eval_count,omitempty"`
+	EvalDuration       int     `json:"eval_duration,omitempty"`
 }
 
 func (r *OllamaResponse) IsComplete() bool {

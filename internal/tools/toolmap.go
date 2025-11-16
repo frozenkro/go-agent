@@ -23,23 +23,12 @@ var ToolMapInst ToolMap
 func InitToolMap(provider globals.Provider) {
 	toolNameMap := make(map[string]ToolMeta)
 
-	var bashToolName string
-	var textEditorToolName string
-
-	if provider == globals.ANTHROPIC {
-		bashToolName = globals.ANTH_BASH
-		textEditorToolName = globals.ANTH_TEXT_EDITOR
-	} else {
-		bashToolName = toolschema.BASH
-		textEditorToolName = toolschema.TEXT_EDITOR
-	}
-
 	toolNameMap[toolschema.BASH] = ToolMeta{
-		Name: bashToolName,
+		Name: toolschema.BASH,
 		Tool: bash.BashTool{},
 	}
 	toolNameMap[toolschema.TEXT_EDITOR] = ToolMeta{
-		Name: textEditorToolName,
+		Name: toolschema.TEXT_EDITOR,
 		Tool: texteditor.NewTextEditorTool(),
 	}
 

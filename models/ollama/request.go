@@ -17,7 +17,7 @@ type OllamaRequest struct {
 	Options   *Options      `json:"options,omitempty"`
 	Stream    bool          `json:"stream"`
 	Think     bool          `json:"think"`
-	KeepAlive string        `json:"keep_alive"`
+	KeepAlive string        `json:"keep_alive,omitempty"`
 }
 
 type Role string
@@ -92,14 +92,14 @@ type RequestFormat string
 const JSON_FORMAT RequestFormat = "json"
 
 type Options struct {
-	Seed        int      `json:"seed"`
-	Temperature int      `json:"temperature"`
-	TopK        int      `json:"top_k"`
-	TopP        int      `json:"top_p"`
-	MinP        int      `json:"min_p"`
-	Stop        []string `json:"stop"`
-	NumCtx      int      `json:"num_ctx"`
-	NumPredict  int      `json:"num_predict"`
+	Seed        int      `json:"seed,omitempty"`
+	Temperature int      `json:"temperature,omitempty"`
+	TopK        int      `json:"top_k,omitempty"`
+	TopP        int      `json:"top_p,omitempty"`
+	MinP        int      `json:"min_p,omitempty"`
+	Stop        []string `json:"stop,omitempty"`
+	NumCtx      int      `json:"num_ctx,omitempty"`
+	NumPredict  int      `json:"num_predict,omitempty"`
 }
 
 func (r *OllamaRequest) Init(model, prompt string) error {
@@ -140,6 +140,9 @@ func (r *OllamaRequest) AddTool(meta *tools.ToolMeta) error {
 }
 
 func (r *OllamaRequest) SetMaxTokens(val int) error {
+	if r.Options == nil {
+		r.Options = &Options{}
+	}
 	r.Options.NumPredict = val
 	return nil
 }
