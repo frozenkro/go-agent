@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	toolschema "github.com/frozenkro/goagent/models/anthropic/tool_schema"
+	"github.com/frozenkro/goagent/models/toolschema"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -27,6 +27,14 @@ func NewTextEditorTool() *TextEditorTool {
 }
 
 type TextEditorWorkerImpl struct{}
+
+func (t TextEditorTool) Spec() toolschema.ToolSpec {
+	return toolschema.ToolSpec{
+		Name:        toolschema.TEXT_EDITOR,
+		Description: "View or modify text files",
+		Parameters:  toolschema.TextEditorToolParams,
+	}
+}
 
 func (t TextEditorTool) Invoke(params any) (string, error) {
 	var base toolschema.BaseTextEditorToolInput
@@ -63,7 +71,9 @@ func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
-	// Handle directory view
+	input.Path = sanitizeRelativePath(input.Path)
+
+	// Handle directory view - basically just the results of `ls`
 	fileInfo, err := os.Stat(input.Path)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get stats for path '%v': %w", input.Path, err)
@@ -78,7 +88,7 @@ func (w TextEditorWorkerImpl) HandleView(params any) (string, error) {
 		for _, v := range entries {
 			var entry string
 			if v.IsDir() {
-				// Indicate to the requesting agent that the entry is a dir
+				// Indicate to the requesting agent that this entry is a dir
 				entry = fmt.Sprintf("%v%c", v.Name(), '/')
 			} else {
 				entry = v.Name()
@@ -141,9 +151,7 @@ func (w TextEditorWorkerImpl) HandleStrReplace(params any) (string, error) {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
-	// if strings.ContainsRune(input.OldStr, '\n') {
-	// 	return "", fmt.Errorf("Multi-line string replace not supported")
-	// }
+	input.Path = sanitizeRelativePath(input.Path)
 
 	fileContent, err := getFileContent(input.Path)
 	if err != nil {
@@ -172,9 +180,7 @@ func (w TextEditorWorkerImpl) HandleCreate(params any) (string, error) {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
 
-	// Ensure "myFile", "./myFile", and "/myFile" all result in a write to "./myFile"
-	cleanInputPath := strings.TrimPrefix(input.Path, "/")
-	input.Path = fmt.Sprintf("./%v", cleanInputPath)
+	input.Path = sanitizeRelativePath(input.Path)
 
 	path := filepath.Dir(input.Path)
 	if err = os.MkdirAll(path, 0755); err != nil {
@@ -200,6 +206,8 @@ func (w TextEditorWorkerImpl) HandleInsert(params any) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Failed to unmarshal params during type conversion: %w", err)
 	}
+
+	input.Path = sanitizeRelativePath(input.Path)
 
 	file, err := os.Open(input.Path)
 	if err != nil {
@@ -248,11 +256,6 @@ func (w TextEditorWorkerImpl) HandleInsert(params any) (string, error) {
 // Unsupported on claude 4, skipping implementation for the time being
 // Note for implementation - we will need to keep a stack of edits per-file per-session
 func (w TextEditorWorkerImpl) HandleUndoEdit(params any) (string, error) {
-	// var input toolschema.TextEditorToolInputUndoEdit
-	// err := mapstructure.Decode(params, &input)
-	// if err != nil {
-	// 	return "", fmt.Errorf("Unable to parse invoke params for TextEditorTool: '%v'", params)
-	// }
 
 	return "", fmt.Errorf("UndoEdit operation unsupported")
 }
@@ -308,4 +311,11 @@ func getFileContent(path string) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+// sanitizeRelativePath ensures "myFile", "./myFile", and "/myFile" all result in a write to "./myFile"
+// This is because agents should never operate outside of cwd
+func sanitizeRelativePath(path string) string {
+	cleanInputPath := strings.TrimPrefix(path, "/")
+	return fmt.Sprintf("./%v", cleanInputPath)
 }

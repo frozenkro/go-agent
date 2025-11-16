@@ -2,6 +2,9 @@ package anthropic
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"github.com/frozenkro/goagent/internal/sessionmgr"
 )
 
 type MessagesBaseResponse struct {
@@ -91,3 +94,82 @@ const (
 	SR_PAUSE_TURN    StopReason = "pause_turn"
 	SR_REFUSAL       StopReason = "refusal"
 )
+
+func (r *MessagesResponse) IsComplete() bool {
+	return r.StopReason != SR_TOOL_USE
+}
+
+func (r *MessagesResponse) GetStatementGroup() ([]sessionmgr.Statement, error) {
+	msgs := []sessionmgr.Statement{}
+
+	for _, v := range r.Content {
+		switch v.GetType() {
+		case TEXT:
+			c, ok := v.(*TextContent)
+			if !ok {
+				fmt.Errorf("Failed to parse to TextContent")
+			}
+
+			msgs = append(msgs, sessionmgr.Statement{
+				Role: sessionmgr.ASSISTANT,
+				Type: sessionmgr.TEXT,
+				Text: c.Text,
+			})
+
+		case TOOL_USE:
+			c, ok := v.(*ToolUseContent)
+			if !ok {
+				fmt.Errorf("Failed to parse to ToolUseContent")
+			}
+
+			msgs = append(msgs, sessionmgr.Statement{
+				Role: sessionmgr.ASSISTANT,
+				Type: sessionmgr.TOOL_CALL,
+				ToolCall: sessionmgr.ToolCall{
+					Name:   c.Name,
+					Params: c.Input,
+					Id:     c.Id,
+				},
+			})
+
+		case THINKING:
+			c, ok := v.(*ThinkingContent)
+			if !ok {
+				return nil, fmt.Errorf("Failed to parse to ThinkingContent")
+			}
+
+			msgs = append(msgs, sessionmgr.Statement{
+				Role: sessionmgr.ASSISTANT,
+				Type: sessionmgr.THINKING,
+				Text: c.Thinking,
+			})
+
+		default:
+			return nil, fmt.Errorf("Unsupported content type '%v'", r.GetType())
+		}
+	}
+
+	return msgs, nil
+}
+
+// Init unmarshals data and checks if anthropic response returned an error according to their schema
+func (r *MessagesResponse) Init(data []byte) error {
+	baseRes := &MessagesBaseResponse{}
+	if err := json.Unmarshal(data, baseRes); err != nil {
+		return fmt.Errorf("failed to unmarshal base response: %w", err)
+	}
+
+	if baseRes.Type == "error" {
+		errRes := &MessagesErrorResponse{}
+		if err := json.Unmarshal(data, errRes); err != nil {
+			return fmt.Errorf("failed to unmarshal error response: %w", err)
+		}
+
+		return fmt.Errorf("Anthropic API error - type: %s, message: %s", errRes.Error.Type, errRes.Error.Message)
+	}
+
+	if err := json.Unmarshal(data, r); err != nil {
+		return fmt.Errorf("failed to unmarshal success response: %w", err)
+	}
+	return nil
+}

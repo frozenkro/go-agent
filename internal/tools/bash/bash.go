@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/creack/pty"
-	toolschema "github.com/frozenkro/goagent/models/anthropic/tool_schema"
+	"github.com/frozenkro/goagent/models/toolschema"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 )
@@ -41,6 +41,14 @@ type tty interface {
 }
 
 type BashSessionOption func(*BashSession)
+
+func (t BashTool) Spec() toolschema.ToolSpec {
+	return toolschema.ToolSpec{
+		Name:        toolschema.BASH,
+		Description: "Execute shell commands in a persistent bash session.",
+		Parameters:  toolschema.BashToolParams,
+	}
+}
 
 func WithTimeout(timeout time.Duration) BashSessionOption {
 	return func(bs *BashSession) {
